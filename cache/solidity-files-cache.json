@@ -115,8 +115,8 @@
       ]
     },
     "/Users/shivmac/Desktop/community-dapp/contracts/MoSJELoanTracker.sol": {
-      "lastModificationDate": 1789166168522,
-      "contentHash": "575ca0346b875d063e23f5690ccbfc0a",
+      "lastModificationDate": 1789166988499,
+      "contentHash": "5f661e9964a4b7207c274b9daf37782b",
       "sourceName": "contracts/MoSJELoanTracker.sol",
       "solcConfig": {
         "version": "0.8.20",

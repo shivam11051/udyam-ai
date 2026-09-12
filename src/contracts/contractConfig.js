@@ -1,4 +1,4 @@
-export const ADDRESS = "0x72277C4206556a76FC4bCA99AA72538B7711624D";
+export const ADDRESS = "0x550E44B995f116d96a67aB2798d3948f525051b8";
 
 export const ABI = [
   { type: "function", name: "governmentSCA", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
