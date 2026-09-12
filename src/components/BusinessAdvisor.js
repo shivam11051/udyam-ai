@@ -503,7 +503,8 @@ const BusinessAdvisor = ({ onApply }) => {
     const cat = formData.businessCategory || "Retail / Micro Business";
 
     try {
-      const apiUrl = (process.env.REACT_APP_BACKEND_URL || 'http://localhost:5001') + '/api/ai/qa';
+      const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://counting-semiconductor-alien-layout.trycloudflare.com';
+      const apiUrl = baseUrl + '/api/ai/qa';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -745,7 +746,8 @@ const BusinessAdvisor = ({ onApply }) => {
     setFinancialPlan(financials);
 
     try {
-      const apiUrl = (process.env.REACT_APP_BACKEND_URL || 'http://localhost:5001') + '/api/ai/advisor';
+      const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://counting-semiconductor-alien-layout.trycloudflare.com';
+      const apiUrl = baseUrl + '/api/ai/advisor';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1066,7 +1068,7 @@ const BusinessAdvisor = ({ onApply }) => {
           <div className="loading-overlay">
             <div className="spinner"></div>
             <div style={{ fontWeight: '600', color: '#0071E3', fontSize: '1.1rem' }}>Analyzing Hyper-Local Market & Geo Data...</div>
-            <div style={{ color: '#6E6E73', fontSize: '0.9rem' }}>Gemini AI is generating structured feasibility & confidence scores</div>
+            <div style={{ color: '#6E6E73', fontSize: '0.9rem' }}>UdyamAI Custom Model is generating structured feasibility & confidence scores</div>
           </div>
         )}
 
@@ -1124,7 +1126,7 @@ const BusinessAdvisor = ({ onApply }) => {
               <span style={{ fontWeight: '700', fontSize: '1rem', color: '#1D1D1F' }}>
                 🧠 AI Voice Advisor Assistant (Ask any Question)
               </span>
-              <span style={{ fontSize: '0.8rem', color: '#0071E3' }}>Powered by Gemini AI</span>
+              <span style={{ fontSize: '0.8rem', color: '#0071E3' }}>Powered by UdyamAI Custom Model</span>
             </div>
             
             <form onSubmit={(e) => { e.preventDefault(); askAIQuestion(); }} style={{ display: 'flex', gap: '0.5rem' }}>

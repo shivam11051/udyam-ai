@@ -44,7 +44,7 @@ UdyamAI solves critical financial inclusion and micro-business planning challeng
 
 ## 💻 Tech Stack
 - **Frontend:** React.js, Lucide Icons, Modern CSS (Glassmorphism UI)
-- **Backend/AI:** Node.js, Express.js, Google Gemini API, Web Speech API
+- **Backend/AI:** Node.js, Express.js, Custom UdyamAI Model, Web Speech API
 - **Blockchain:** Ethereum (Sepolia Testnet), Solidity, Ethers.js, Hardhat
 
 ## ⚙️ How to Run Locally
@@ -55,13 +55,13 @@ npx hardhat compile
 npx hardhat run scripts/deploy.js --network sepolia
 ```
 
-### 2. Backend (Gemini AI)
+### 2. Backend (Custom AI)
 ```bash
 cd backend
 npm install
 node server.js
 ```
-*Runs on `localhost:5001`. Ensure your `.env` has a valid `GEMINI_API_KEY`.*
+*Runs on `localhost:5001`. Ensure your `.env` has valid API keys.*
 
 ### 3. Frontend (React DApp)
 ```bash

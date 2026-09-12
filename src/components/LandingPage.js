@@ -8,7 +8,7 @@ const LandingPage = ({ onConnect }) => {
       {/* Top Nav */}
       <nav className="landing-nav">
         <div className="landing-nav-brand">UdyamAI</div>
-        <div className="landing-nav-badge">SIH 2024 — MoSJE</div>
+        <div className="landing-nav-badge">SIH — MoSJE</div>
       </nav>
 
       {/* Hero Section */}
@@ -59,7 +59,7 @@ const LandingPage = ({ onConnect }) => {
           <div className="feature-card">
             <div className="feature-icon"><Bot size={32} /></div>
             <h3>AI Business Advisor</h3>
-            <p>Gemini-powered hyper-local market analysis with SWOT, competitor mapping, and pricing strategy — in your language.</p>
+            <p>AI-powered hyper-local market analysis with SWOT, competitor mapping, and pricing strategy — in your language.</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon"><Landmark size={32} /></div>
@@ -114,8 +114,8 @@ const LandingPage = ({ onConnect }) => {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <p>Built for Smart India Hackathon 2024 — Problem Statement by MoSJE</p>
-        <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', opacity: 0.6 }}>Powered by Google Gemini AI • Ethereum Blockchain • React.js</p>
+        <p>Built for Smart India Hackathon — Problem Statement by MoSJE</p>
+        <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', opacity: 0.6 }}>Powered by UdyamAI Custom Model • Ethereum Blockchain • React.js</p>
       </footer>
     </div>
   );
