@@ -6,6 +6,7 @@ import { ShieldAlert, CheckCircle, FileText, Clock, ExternalLink } from "lucide-
 export default function AdminDashboard() {
   const { contract, account, isAdmin, provider, addNotif } = useContext(AppContext);
   const [pendingLoans, setPendingLoans] = useState([]);
+  const [approvedLoans, setApprovedLoans] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [manualAddress, setManualAddress] = useState("");
@@ -19,13 +20,14 @@ export default function AdminDashboard() {
 
   const loadDashboardData = async () => {
     setLoading(true);
-    await Promise.all([fetchPendingLoans(), fetchAllEvents()]);
+    await Promise.all([fetchLoans(), fetchAllEvents()]);
     setLoading(false);
   };
 
-  const fetchPendingLoans = async () => {
+  const fetchLoans = async () => {
     try {
       const pending = [];
+      const approved = [];
       const seen = new Set();
       try {
         const marginFilter = contract.filters.MarginDeposited();
@@ -39,13 +41,29 @@ export default function AdminDashboard() {
           seen.add(addr.toLowerCase());
           try {
             const loan = await contract.loans(addr);
-            if (loan.isActive === true && loan.isApproved === false) {
-              pending.push({
-                address: addr,
-                projectCost: formatEther(loan.projectCost),
-                marginDeposited: formatEther(loan.marginDeposited),
-                loanAmount: formatEther(loan.loanAmount),
-              });
+            if (loan.isActive === true) {
+              if (loan.isApproved === false) {
+                pending.push({
+                  address: addr,
+                  projectCost: formatEther(loan.projectCost),
+                  marginDeposited: formatEther(loan.marginDeposited),
+                  loanAmount: formatEther(loan.loanAmount),
+                });
+              } else {
+                let sbtLevel = 0;
+                try {
+                  const tokenId = await contract.userSBT(addr);
+                  if (tokenId > 0n) {
+                    sbtLevel = Number(await contract.sbtLevel(tokenId));
+                  }
+                } catch(e) {}
+                
+                approved.push({
+                  address: addr,
+                  outstanding: formatEther(loan.outstandingBalance),
+                  sbtLevel: sbtLevel
+                });
+              }
             }
           } catch (e) {
             console.warn("Could not fetch loan for", addr);
@@ -58,19 +76,36 @@ export default function AdminDashboard() {
       if (!seen.has(account.toLowerCase())) {
         try {
           const ownLoan = await contract.loans(account);
-          if (ownLoan.isActive === true && ownLoan.isApproved === false) {
-            pending.push({
-              address: account,
-              projectCost: formatEther(ownLoan.projectCost),
-              marginDeposited: formatEther(ownLoan.marginDeposited),
-              loanAmount: formatEther(ownLoan.loanAmount),
-            });
+          if (ownLoan.isActive === true) {
+            if (ownLoan.isApproved === false) {
+              pending.push({
+                address: account,
+                projectCost: formatEther(ownLoan.projectCost),
+                marginDeposited: formatEther(ownLoan.marginDeposited),
+                loanAmount: formatEther(ownLoan.loanAmount),
+              });
+            } else {
+                let sbtLevel = 0;
+                try {
+                  const tokenId = await contract.userSBT(account);
+                  if (tokenId > 0n) {
+                    sbtLevel = Number(await contract.sbtLevel(tokenId));
+                  }
+                } catch(e) {}
+                
+                approved.push({
+                  address: account,
+                  outstanding: formatEther(ownLoan.outstandingBalance),
+                  sbtLevel: sbtLevel
+                });
+            }
           }
         } catch (e) { /* no loan */ }
       }
       setPendingLoans(pending);
+      setApprovedLoans(approved);
     } catch (e) {
-      console.error("fetchPendingLoans error:", e);
+      console.error("fetchLoans error:", e);
     }
   };
 
@@ -278,6 +313,34 @@ export default function AdminDashboard() {
 
         {/* Right Sidebar (Manual Lookup) */}
         <div>
+          <div className="card" style={{ padding: '2rem', background: 'var(--bg-card)', border: 'none', boxShadow: 'var(--shadow-sm)', marginBottom: '2rem' }}>
+            <h4 style={{ marginBottom: '0.5rem', color: '#1D1D1F', fontSize: '1.1rem' }}>Active Portfolio</h4>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              Track approved loans and on-chain credit scores.
+            </p>
+            {approvedLoans.length === 0 ? (
+              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>No active loans yet.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {approvedLoans.map((loan, i) => (
+                  <div key={i} style={{ padding: '1rem', background: 'var(--bg-main)', borderLeft: loan.sbtLevel > 0 ? '4px solid #30D158' : '4px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '0.85rem', color: '#1D1D1F' }}>{loan.address.substring(0,6)}...{loan.address.substring(38)}</span>
+                      {loan.sbtLevel > 0 ? (
+                        <span style={{ fontSize: '0.8rem', background: '#e0f5e4', color: '#1B8A3A', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold' }}>
+                          🏆 Lvl {loan.sbtLevel}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.8rem', background: '#f0f0f0', color: '#888', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>No SBT</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Outstanding: <strong style={{color: '#1D1D1F'}}>{loan.outstanding} ETH</strong></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="card" style={{ padding: '2rem', background: 'var(--bg-card)', border: 'none', boxShadow: 'var(--shadow-sm)' }}>
             <h4 style={{ marginBottom: '0.5rem', color: '#1D1D1F', fontSize: '1.1rem' }}>Manual Override</h4>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
