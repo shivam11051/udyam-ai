@@ -570,3 +570,13 @@ Initiall capital : 500000
 [2026-09-13T03:01:18.617Z] ℹ️ INFO: 🚀 Server running on port 5001
 [2026-09-13T03:01:46.913Z] ℹ️ INFO: Received Telegram message from 𝑳𝒊𝒍𝒍𝒚 𝑶𝒑: I want to start some business in hazaribagh jharkhand
 [2026-09-13T03:08:47.536Z] ℹ️ INFO: Successfully generated detailed report using gemini-3.6-flash
+[2026-09-13T04:36:34.661Z] ⚠️ WARNING: ⚠️ MONGODB_URI not found. Starting without database.
+[2026-09-13T04:36:34.815Z] ℹ️ INFO: 🤖 Telegram Bot initialized and polling for messages.
+[2026-09-13T04:36:34.815Z] ℹ️ INFO: 🚀 Server running on port 5001
+[2026-09-13T04:44:50.972Z] ℹ️ INFO: Successfully generated detailed report using gemini-3.6-flash
+[2026-09-13T04:45:59.044Z] ℹ️ INFO: Successfully generated detailed report using gemini-3.6-flash
+[2026-09-13T04:52:01.449Z] ℹ️ INFO: Successfully generated detailed report using gemini-3.6-flash
+[2026-09-13T04:55:19.742Z] ℹ️ INFO: Successfully generated detailed report using gemini-3.6-flash
+[2026-09-13T04:59:39.983Z] ℹ️ INFO: Received Telegram message from Akshiti: /start
+[2026-09-13T05:00:03.016Z] ℹ️ INFO: Received Telegram message from Akshiti: I want to invest my money
+[2026-09-13T05:00:29.428Z] ℹ️ INFO: Received Telegram message from Akshiti: Growing my bisiness

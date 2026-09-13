@@ -2,41 +2,73 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, StopCircle, Bot, MapPin, Store, Flag, ShieldAlert, FileText, CheckCircle } from 'lucide-react';
 import './BusinessAdvisor.css';
 
-// Simple Markdown Parser for Feasibility Report
+// Advanced Markdown Parser for Feasibility Report & QA
 const renderMarkdown = (text) => {
   if (!text) return null;
   
   const lines = text.split('\n');
   return lines.map((line, idx) => {
-    // Check if it's a bullet point
-    const isBullet = line.trim().startsWith('- ') || line.trim().startsWith('* ');
-    const cleanedLine = isBullet ? line.trim().substring(2) : line;
+    let cleanedLine = line.trim();
     
-    // Parse bold text **text**
-    const parts = cleanedLine.split(/(\*\*.*?\*\*)/g);
+    // Empty lines
+    if (cleanedLine === '') {
+      return <div key={idx} style={{ height: '0.75rem' }}></div>;
+    }
+
+    // Headers
+    let headerLevel = 0;
+    if (cleanedLine.startsWith('### ')) { headerLevel = 3; cleanedLine = cleanedLine.substring(4); }
+    else if (cleanedLine.startsWith('## ')) { headerLevel = 2; cleanedLine = cleanedLine.substring(3); }
+    else if (cleanedLine.startsWith('# ')) { headerLevel = 1; cleanedLine = cleanedLine.substring(2); }
+
+    // Bullet points
+    const isBullet = cleanedLine.startsWith('- ') || cleanedLine.startsWith('* ');
+    if (isBullet) cleanedLine = cleanedLine.substring(2);
+
+    // Numbered lists (e.g. "1. ")
+    const isNumbered = /^\d+\.\s/.test(cleanedLine);
+    let numberPrefix = '';
+    if (isNumbered) {
+      numberPrefix = cleanedLine.match(/^\d+\.\s/)[0];
+      cleanedLine = cleanedLine.substring(numberPrefix.length);
+    }
+
+    // Inline formatting: Bold (**text**) and Italic (*text*)
+    const parts = cleanedLine.split(/(\*\*.*?\*\*|\*.*?\*)/g);
     
     const formattedLine = parts.map((part, pIdx) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={pIdx} style={{ color: '#0071E3' }}>{part.slice(2, -2)}</strong>;
+        return <strong key={pIdx} style={{ color: '#1D1D1F', fontWeight: '700' }}>{part.slice(2, -2)}</strong>;
       }
-      return part;
+      if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+        return <em key={pIdx} style={{ color: '#444' }}>{part.slice(1, -1)}</em>;
+      }
+      // Remove any leftover rogue asterisks (often AI generates random stars)
+      return part.replace(/\*/g, '');
     });
 
-    if (isBullet) {
+    if (headerLevel === 1) {
+      return <h2 key={idx} style={{ color: '#0071E3', marginTop: '1.5rem', marginBottom: '1rem', fontSize: '1.4rem', borderBottom: '2px solid #e5e5ea', paddingBottom: '0.5rem', fontWeight: '800' }}>{formattedLine}</h2>;
+    }
+    if (headerLevel === 2) {
+      return <h3 key={idx} style={{ color: '#1D1D1F', marginTop: '1.25rem', marginBottom: '0.75rem', fontSize: '1.2rem', fontWeight: '700' }}>{formattedLine}</h3>;
+    }
+    if (headerLevel === 3) {
+      return <h4 key={idx} style={{ color: '#333', marginTop: '1rem', marginBottom: '0.5rem', fontSize: '1.05rem', fontWeight: '600' }}>{formattedLine}</h4>;
+    }
+
+    if (isBullet || isNumbered) {
       return (
-        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-          <span style={{ marginRight: '0.5rem', color: '#0071E3' }}>•</span>
-          <span>{formattedLine}</span>
+        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>
+          <span style={{ marginRight: '0.75rem', color: '#0071E3', fontWeight: 'bold', minWidth: '1rem' }}>
+            {isNumbered ? numberPrefix : '•'}
+          </span>
+          <span style={{ lineHeight: '1.5', color: '#444' }}>{formattedLine}</span>
         </div>
       );
     }
     
-    // Empty lines
-    if (cleanedLine.trim() === '') {
-      return <br key={idx} />;
-    }
-    
-    return <p key={idx} style={{ margin: '0 0 10px 0', lineHeight: '1.5' }}>{formattedLine}</p>;
+    return <p key={idx} style={{ margin: '0 0 0.75rem 0', lineHeight: '1.5', color: '#444' }}>{formattedLine}</p>;
   });
 };
 
@@ -249,15 +281,33 @@ const BusinessAdvisor = ({ onApply }) => {
   const [qaLoading, setQaLoading] = useState(false);
   const [qaListening, setQaListening] = useState(false);
   
-  // DigiLocker eKYC State
-  const [digiLockerStatus, setDigiLockerStatus] = useState('idle'); // idle, loading, verified
+  // DigiLocker eKYC Modal State
+  const [digiLockerStatus, setDigiLockerStatus] = useState('idle'); // idle, verified
+  const [showDlModal, setShowDlModal] = useState(false);
+  const [dlStep, setDlStep] = useState(1); // 1: Aadhaar, 2: OTP, 3: Processing
+  const [dlAadhaar, setDlAadhaar] = useState('');
+  const [dlOtp, setDlOtp] = useState('');
 
-  const handleDigiLockerVerify = () => {
-    setDigiLockerStatus('loading');
-    setTimeout(() => {
-      setDigiLockerStatus('verified');
-      setFormData(prev => ({ ...prev, aadhar: '✅ Verified via DigiLocker (ID: 7392-XXXX-XXXX)' }));
-    }, 2500); // simulate network delay
+  const handleDigiLockerStart = () => {
+    setShowDlModal(true);
+    setDlStep(1);
+    setDlAadhaar('');
+    setDlOtp('');
+  };
+
+  const handleDlSubmitAadhaar = () => {
+    if (dlAadhaar.length >= 12) setDlStep(2);
+  };
+
+  const handleDlSubmitOtp = () => {
+    if (dlOtp.length >= 6) {
+      setDlStep(3); // Show processing
+      setTimeout(() => {
+        setShowDlModal(false);
+        setDigiLockerStatus('verified');
+        setFormData(prev => ({ ...prev, aadhar: '✅ Verified via DigiLocker (ID: ****-****-' + dlAadhaar.slice(-4) + ')' }));
+      }, 2500);
+    }
   };
 
 
@@ -358,21 +408,47 @@ const BusinessAdvisor = ({ onApply }) => {
     return cleaned.replace(/\.$/, '');
   };
 
+  // Humanizer TTS Helper
+  const cleanTextForSpeech = (text) => {
+    if (!text) return "";
+    return text
+      .replace(/\*\*/g, '')          // Remove bold asterisks
+      .replace(/#/g, '')             // Remove headers (fixed useless escape)
+      .replace(/\*/g, '')            // Remove italic asterisks
+      .replace(/-\s/g, '. ')         // Convert bullet points to full stops for pausing
+      .replace(/\n\n/g, '. ')        // Double newlines become full stops
+      .replace(/\n/g, ', ')          // Single newlines become commas for slight pause
+      .replace(/([a-zA-Z])([0-9])/g, '$1 $2') // Separate letters and numbers for better reading
+      .trim();
+  };
+
+  const getBestVoice = (lang) => {
+    const voices = window.speechSynthesis.getVoices();
+    // Prefer Google or premium local voices for better cadence
+    let bestVoice = voices.find(v => v.lang === lang && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Enhanced')));
+    if (!bestVoice) bestVoice = voices.find(v => v.lang === lang);
+    if (!bestVoice) bestVoice = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+    return bestVoice;
+  };
+
   const triggerAutomaticVoicePrompt = (text, callback) => {
     try {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
+      const cleanText = cleanTextForSpeech(text);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       const currentLanguage = formDataRef.current.language;
-      if (currentLanguage === 'Hindi') {
-        utterance.lang = 'hi-IN';
-      } else if (currentLanguage === 'Marathi') {
-        utterance.lang = 'mr-IN';
-      } else if (currentLanguage === 'Bengali') {
-        utterance.lang = 'bn-IN';
-      } else {
-        utterance.lang = 'en-IN';
-      }
-      utterance.rate = 0.95;
+      
+      let langCode = 'en-IN';
+      if (currentLanguage === 'Hindi') langCode = 'hi-IN';
+      else if (currentLanguage === 'Marathi') langCode = 'mr-IN';
+      else if (currentLanguage === 'Bengali') langCode = 'bn-IN';
+      
+      utterance.lang = langCode;
+      utterance.rate = 0.90; // Slower for human pacing
+      utterance.pitch = 1.0;
+
+      const voice = getBestVoice(langCode);
+      if (voice) utterance.voice = voice;
 
       if (callback) {
         utterance.onend = callback;
@@ -395,11 +471,20 @@ const BusinessAdvisor = ({ onApply }) => {
     stopAllVoice();
     setActiveReadingCard(cardKey);
 
-    const utterance = new SpeechSynthesisUtterance(textContent);
-    if (formData.language === 'Hindi') utterance.lang = 'hi-IN';
-    else if (formData.language === 'Marathi') utterance.lang = 'mr-IN';
-    else if (formData.language === 'Bengali') utterance.lang = 'bn-IN';
-    else utterance.lang = 'en-IN';
+    const cleanText = cleanTextForSpeech(textContent);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    let langCode = 'en-IN';
+    if (formData.language === 'Hindi') langCode = 'hi-IN';
+    else if (formData.language === 'Marathi') langCode = 'mr-IN';
+    else if (formData.language === 'Bengali') langCode = 'bn-IN';
+    
+    utterance.lang = langCode;
+    utterance.rate = 0.88; // Slower for reports to allow processing
+    utterance.pitch = 1.05; // Slightly higher pitch for clarity
+    
+    const voice = getBestVoice(langCode);
+    if (voice) utterance.voice = voice;
 
     utterance.onend = () => setActiveReadingCard(null);
     utterance.onerror = () => setActiveReadingCard(null);
@@ -691,12 +776,19 @@ const BusinessAdvisor = ({ onApply }) => {
       MoSJE Scheme Eligibility: ${report.mosjeEligibility}.
     `;
 
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    const cleanText = cleanTextForSpeech(textToSpeak);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     
-    if (formData.language === 'Hindi') utterance.lang = 'hi-IN';
-    else if (formData.language === 'Marathi') utterance.lang = 'mr-IN';
-    else if (formData.language === 'Bengali') utterance.lang = 'bn-IN';
-    else utterance.lang = 'en-IN';
+    let langCode = 'en-IN';
+    if (formData.language === 'Hindi') langCode = 'hi-IN';
+    else if (formData.language === 'Marathi') langCode = 'mr-IN';
+    else if (formData.language === 'Bengali') langCode = 'bn-IN';
+    
+    utterance.lang = langCode;
+    utterance.rate = 0.85; // deliberate, professional pacing
+    
+    const voice = getBestVoice(langCode);
+    if (voice) utterance.voice = voice;
 
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
@@ -928,7 +1020,7 @@ const BusinessAdvisor = ({ onApply }) => {
                 {digiLockerStatus === 'idle' && (
                   <button 
                     type="button" 
-                    onClick={handleDigiLockerVerify}
+                    onClick={handleDigiLockerStart}
                     style={{ 
                       width: '100%', padding: '1rem', background: '#e0f5e4', 
                       border: '2px dashed #30D158', color: '#1B8A3A', 
@@ -940,13 +1032,6 @@ const BusinessAdvisor = ({ onApply }) => {
                   >
                     <FileText size={18} /> Connect DigiLocker to Verify Identity
                   </button>
-                )}
-
-                {digiLockerStatus === 'loading' && (
-                  <div style={{ width: '100%', padding: '1rem', background: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                    <div className="spinner" style={{ width: '20px', height: '20px', borderTopColor: '#30D158', borderRightColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: 'transparent', borderWidth: '2px' }}></div>
-                    <span style={{ color: '#1D1D1F', fontWeight: '500' }}>Authenticating with UIDAI...</span>
-                  </div>
                 )}
 
                 {digiLockerStatus === 'verified' && (
@@ -1610,6 +1695,105 @@ const BusinessAdvisor = ({ onApply }) => {
               >
                 🛑 Stop Voice
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Realistic DigiLocker Mock Modal */}
+      {showDlModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10000 }}>
+          <div style={{ background: 'white', width: '100%', maxWidth: '400px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            
+            {/* Header */}
+            <div style={{ background: '#003366', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', background: 'white', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <ShieldAlert size={20} color="#003366" />
+                </div>
+                <div style={{ color: 'white' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '1.1rem', lineHeight: '1.2' }}>DigiLocker</div>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>National eGovernance Division</div>
+                </div>
+              </div>
+              {dlStep !== 3 && (
+                <button onClick={() => setShowDlModal(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem', opacity: 0.7 }}>&times;</button>
+              )}
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '2rem 1.5rem' }}>
+              {dlStep === 1 && (
+                <div>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#1D1D1F' }}>Sign In to your account!</h3>
+                  <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Enter your Aadhaar Number to fetch your documents securely.</p>
+                  
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.5rem', color: '#555' }}>Aadhaar Number</label>
+                    <input 
+                      type="text" 
+                      placeholder="12 digit Aadhaar number" 
+                      value={dlAadhaar} 
+                      onChange={e => setDlAadhaar(e.target.value)}
+                      style={{ width: '100%', padding: '0.75rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '1rem' }}
+                      maxLength={12}
+                    />
+                  </div>
+
+                  <button 
+                    onClick={handleDlSubmitAadhaar}
+                    disabled={dlAadhaar.length < 12}
+                    style={{ width: '100%', padding: '0.8rem', background: dlAadhaar.length < 12 ? '#ccc' : '#003366', color: 'white', border: 'none', borderRadius: '6px', fontSize: '1rem', fontWeight: 'bold', cursor: dlAadhaar.length < 12 ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+
+              {dlStep === 2 && (
+                <div>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#1D1D1F' }}>Verify OTP</h3>
+                  <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                    OTP has been sent to your mobile number registered with Aadhaar ending in ******{dlAadhaar.slice(-4)}.
+                  </p>
+                  
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.5rem', color: '#555' }}>Enter 6-digit OTP</label>
+                    <input 
+                      type="text" 
+                      placeholder="000000" 
+                      value={dlOtp} 
+                      onChange={e => setDlOtp(e.target.value)}
+                      style={{ width: '100%', padding: '0.75rem', border: '1px solid #ccc', borderRadius: '6px', fontSize: '1rem', textAlign: 'center', letterSpacing: '8px' }}
+                      maxLength={6}
+                    />
+                  </div>
+
+                  <button 
+                    onClick={handleDlSubmitOtp}
+                    disabled={dlOtp.length < 6}
+                    style={{ width: '100%', padding: '0.8rem', background: dlOtp.length < 6 ? '#ccc' : '#003366', color: 'white', border: 'none', borderRadius: '6px', fontSize: '1rem', fontWeight: 'bold', cursor: dlOtp.length < 6 ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}
+                  >
+                    Submit
+                  </button>
+                  <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#0071E3', cursor: 'pointer' }}>Resend OTP</span>
+                  </div>
+                </div>
+              )}
+
+              {dlStep === 3 && (
+                <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                  <div className="spinner" style={{ width: '40px', height: '40px', borderTopColor: '#003366', margin: '0 auto 1.5rem' }}></div>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#1D1D1F' }}>Verifying...</h3>
+                  <p style={{ color: '#888', fontSize: '0.85rem' }}>Securely fetching demographic data from UIDAI.</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div style={{ background: '#f5f5f5', padding: '0.75rem', textAlign: 'center', fontSize: '0.7rem', color: '#888' }}>
+              🔒 Powered by DigiLocker API (Mock Environment)
             </div>
           </div>
         </div>
