@@ -43,6 +43,8 @@ const generateSmartFeasibilityReport = (reqBody = {}) => {
     interestRate = "4.0% - 5.0% p.a.";
   }
 
+  const isBengali = language === "Bengali";
+
   const formattedMargin = marginCapital.toLocaleString('en-IN');
   const formattedCost = projectCost.toLocaleString('en-IN');
   const formattedLoan = govtLoan.toLocaleString('en-IN');
@@ -64,11 +66,15 @@ const generateSmartFeasibilityReport = (reqBody = {}) => {
       whatIfScenarios: 94
     },
     marketReach: isHindi
-      ? `${location} क्षेत्र के 5-10 किमी के दायरे में प्राथमिक और द्वितीयक उपभोक्ता बाजार का विस्तृत अध्ययन प्रस्तुत है:\n\n1. प्राथमिक लक्षित ग्राहक वर्ग: आसपास की ग्रामीण आबादी और नजदीकी ब्लॉक हाट-बाजारों में प्रतिदिन 1,500 से अधिक संभावित खरीदार सक्रिय हैं।\n2. वितरण चैनल: उत्पाद/सेवा का वितरण 3 प्राथमिक चैनलों से होगा — प्रत्यक्ष रिटेल आउटलेट, नजदीकी किराना और सहकारी संघों के साथ थोक आपूर्ति समझौते, तथा महिला स्वयं सहायता समूहों (SHGs) के जरिए डोर-टू-डोर नेटवर्क।\n3. आपूर्ति श्रृंखला एवं लॉजिस्टिक्स: ब्लॉक मुख्यालय से 10 किमी की परिधि में परिवहन लागत केवल 3-5% रहती है, जिससे मार्जिन सुरक्षित रहता है और दैनिक कैश-फ्लो स्थिर रहता है।`
-      : `Comprehensive market reach analysis for a 5–10 km catchment area around ${location}:\n\n1. Immediate Target Demographics: Over 1,500+ active daily consumers in weekly block haats, local residential clusters, and nearby commercial junctions.\n2. Primary Distribution Channels: Multi-tier reach comprising (a) Direct retail storefront for walk-in local customers, (b) B2B supply partnerships with regional Kirana & cooperative hubs, and (c) Hyper-local doorstep fulfillment through Self-Help Group (SHG) networks.\n3. Logistics & Sourcing Radius: Sourcing within a 10 km radius minimizes freight overheads to under 4% of gross sales, protecting operational margins and maintaining cash liquidity.`,
+      ? `**${location}** क्षेत्र के 5-10 किमी के दायरे में प्राथमिक और द्वितीयक उपभोक्ता बाजार का विस्तृत अध्ययन प्रस्तुत है:\n\n- **प्राथमिक लक्षित ग्राहक वर्ग**: आसपास की ग्रामीण आबादी और नजदीकी ब्लॉक हाट-बाजारों में प्रतिदिन **1,500 से अधिक** संभावित खरीदार सक्रिय हैं।\n- **वितरण चैनल**: उत्पाद/सेवा का वितरण 3 प्राथमिक चैनलों से होगा — प्रत्यक्ष रिटेल आउटलेट, नजदीकी किराना और सहकारी संघों के साथ थोक आपूर्ति समझौते, तथा महिला स्वयं सहायता समूहों (SHGs) के जरिए डोर-टू-डोर नेटवर्क।\n- **आपूर्ति श्रृंखला एवं लॉजिस्टिक्स**: ब्लॉक मुख्यालय से 10 किमी की परिधि में परिवहन लागत केवल **3-5%** रहती है, जिससे मार्जिन सुरक्षित रहता है और दैनिक कैश-फ्लो स्थिर रहता है।`
+      : isBengali
+      ? `**${location}**-এর ৫-১০ কিমি এলাকার মধ্যে বাজার বিশ্লেষণ:\n\n- **লক্ষ্য গ্রাহক**: স্থানীয় হাট ও বাজারে প্রতিদিন **১,৫০০+** সম্ভাব্য ক্রেতা।\n- **বিতরণ ব্যবস্থা**: খুচরা আউটলেট এবং স্বনির্ভর গোষ্ঠীর (SHG) মাধ্যমে সরবরাহ।\n- **লজিস্টিক্স**: পরিবহন খরচ মাত্র **৩-৫%** হবে।`
+      : `Comprehensive market reach analysis for a 5–10 km catchment area around **${location}**:\n\n- **Immediate Target Demographics**: Over **1,500+ active daily consumers** in weekly block haats, local residential clusters, and nearby commercial junctions.\n- **Primary Distribution Channels**: Multi-tier reach comprising (a) Direct retail storefront for walk-in local customers, (b) B2B supply partnerships with regional Kirana & cooperative hubs, and (c) Hyper-local doorstep fulfillment through Self-Help Group (SHG) networks.\n- **Logistics & Sourcing Radius**: Sourcing within a 10 km radius minimizes freight overheads to under **4%** of gross sales, protecting operational margins and maintaining cash liquidity.`,
     opportunityAnalysis: isHindi
-      ? `${location} के स्थानीय अर्थतंत्र में ${businessCategory} के लिए अप्रयुक्त बाजार अवसरों का गहन विश्लेषण:\n\n• बाजार अंतराल (Market Gap): ${location} में वर्तमान में असंगठित और घटिया गुणवत्ता वाले आपूर्तिकर्ता सक्रिय हैं। संगठित, मानकीकृत और MoSJE प्रमाणित उद्यम के लिए 35% से अधिक बाजार हिस्सेदारी तुरंत हासिल करने का अवसर है।\n• मूल्य संवर्धन (Value Addition): कच्चे माल की प्रोसेसिंग और स्वच्छतापूर्ण पैकेजिंग से 15-20% का अतिरिक्त ग्रॉस मार्जिन प्राप्त किया जा सकता है।\n• डिजिटल एकीकरण: यूपीआई (UPI) और क्यूआर-आधारित भुगतानों को अपनाकर युवा और मध्यम-आय वर्ग के 100% ग्राहकों को आकर्षित किया जा सकता है।`
-      : `Localized Market Opportunity & Niche Analysis for ${businessCategory} in ${location}:\n\n• Identified Market Gap: Currently, the ${location} block relies on unorganized vendors with inconsistent pricing and quality fluctuations. Establishing a structured, MoSJE-backed enterprise fills an immediate demand deficit with an estimated 35%+ market share capture potential.\n• Premium Margin Leverage: Introducing standardized grading, hygienic packaging, and clear price tags yields an additional 15-20% margin premium over informal competitors.\n• Digital Payment Adoption: Integrating UPI payments and digital order tracking unlocks friction-free transactions with local tech-savvy households and small business buyers.`,
+      ? `**${location}** के स्थानीय अर्थतंत्र में **${businessCategory}** के लिए अप्रयुक्त बाजार अवसरों का गहन विश्लेषण:\n\n- **बाजार अंतराल (Market Gap)**: **${location}** में वर्तमान में असंगठित और घटिया गुणवत्ता वाले आपूर्तिकर्ता सक्रिय हैं। संगठित, मानकीकृत और MoSJE प्रमाणित उद्यम के लिए **35% से अधिक** बाजार हिस्सेदारी तुरंत हासिल करने का अवसर है।\n- **मूल्य संवर्धन (Value Addition)**: कच्चे माल की प्रोसेसिंग और स्वच्छतापूर्ण पैकेजिंग से **15-20%** का अतिरिक्त ग्रॉस मार्जिन प्राप्त किया जा सकता है।\n- **डिजिटल एकीकरण**: यूपीआई (UPI) और क्यूआर-आधारित भुगतानों को अपनाकर युवा और मध्यम-आय वर्ग के 100% ग्राहकों को आकर्षित किया जा सकता है।`
+      : isBengali
+      ? `**${location}**-এ **${businessCategory}**-এর সুযোগ:\n\n- **বাজারের অভাব**: অসংগঠিত বিক্রেতাদের কারণে **৩৫%+** বাজার দখলের সুযোগ রয়েছে।\n- **ভ্যালু অ্যাডিশন**: ভালো প্যাকেজিং-এর মাধ্যমে **১৫-২০%** বেশি লাভ।\n- **ডিজিটাল পেমেন্ট**: UPI ব্যবহার করে আরও গ্রাহক টানা সম্ভব।`
+      : `Localized Market Opportunity & Niche Analysis for **${businessCategory}** in **${location}**:\n\n- **Identified Market Gap**: Currently, the **${location}** block relies on unorganized vendors with inconsistent pricing and quality fluctuations. Establishing a structured, MoSJE-backed enterprise fills an immediate demand deficit with an estimated **35%+ market share capture potential**.\n- **Premium Margin Leverage**: Introducing standardized grading, hygienic packaging, and clear price tags yields an additional **15-20% margin premium** over informal competitors.\n- **Digital Payment Adoption**: Integrating UPI payments and digital order tracking unlocks friction-free transactions with local tech-savvy households and small business buyers.`,
     swot: {
       strengths: isHindi ? [
         `MoSJE की ${schemeName} योजना के तहत ₹${formattedLoan} (90%) की भारी concessional लोन सहायता केवल ${interestRate} वार्षिक ब्याज दर पर।`,
@@ -211,7 +217,7 @@ Enterprise & Financial Details:
 - Total Project Expenditure (10x): ₹${marginCapital * 10}
 
 INSTRUCTIONS FOR MAXIMUM DETAIL & DEPTH:
-Generate an exhaustive, highly specific localized strategy. For EVERY text section (marketReach, opportunityAnalysis, threatsIdentification, competitorMapping, productMarketValue, mosjeEligibility), provide detailed, multi-paragraph text (at least 3-4 structured bullet points or paragraphs) containing concrete numbers, regional supply hubs, customer estimates, pricing calculations, and official MoSJE guidelines.
+Generate an exhaustive, highly specific localized strategy. For EVERY text section (marketReach, opportunityAnalysis, threatsIdentification, competitorMapping, productMarketValue, mosjeEligibility), provide the response in CLEAR BULLET POINTS (-). ALWAYS highlight the most important keywords and numbers in BOLD (**keyword**). Ensure the output is not just a long paragraph. Provide concrete numbers, regional supply hubs, customer estimates, pricing calculations, and official MoSJE guidelines.
 
 JSON Structure format required:
 {
@@ -390,6 +396,7 @@ const askAdvisorQuestion = async (req, res) => {
     const generateSmartFallbackAnswer = (q) => {
       const qLower = q.toLowerCase();
       const isHindi = language === "Hindi";
+      const isBengali = language === "Bengali";
       const formattedCost = cost.toLocaleString('en-IN');
       const formattedLoan = Math.round(cost * 0.9).toLocaleString('en-IN');
 
@@ -398,7 +405,10 @@ const askAdvisorQuestion = async (req, res) => {
         if (isHindi) {
           return `${scheme} योजना के तहत ₹10 लाख तक के ऋण के लिए किसी अतिरिक्त संपत्ति या भूमि (Collateral) को गिरवी रखने की आवश्यकता नहीं है। आपका ऋण 100% सरकारी क्रेडिट गारंटी और DApp पर आपकी 10% स्मार्ट कॉन्ट्रैक्ट मार्जिन राशि से सुरक्षित रहता है।`;
         }
-        return `Under ${scheme}, concessional loans up to ₹10 Lakh require NO property mortgage or third-party collateral guarantee. The funding is 100% secured through government Credit Guarantee mechanisms and your 10% smart contract escrow deposit.`;
+        if (isBengali) {
+          return `**${scheme}**-এর অধীনে ১০ লক্ষ টাকা পর্যন্ত ঋণের জন্য কোনো সম্পত্তি বন্ধক রাখতে হবে না। আপনার ঋণ সরকারি গ্যারান্টি এবং স্মার্ট চুক্তির দ্বারা সুরক্ষিত।`;
+        }
+        return `Under **${scheme}**, concessional loans up to ₹10 Lakh require NO property mortgage or third-party collateral guarantee. The funding is 100% secured through government Credit Guarantee mechanisms and your 10% smart contract escrow deposit.`;
       }
 
       // Intent 2: Machinery / Equipment / Tools / Assets
@@ -502,11 +512,11 @@ User Business Context:
 - Total Project Cost: ₹${cost.toLocaleString('en-IN')}
 
 INSTRUCTIONS:
-1. Provide a direct, specific, highly accurate, and clear answer answering the EXACT question asked: "${question}".
-2. Adapt your answer specifically to their location (${loc}), business (${cat}), and MoSJE scheme rules.
-3. Structure your response in 3 to 5 clear, informative sentences with exact numbers, percentages, or steps where relevant.
+1. Act as a highly intelligent, conversational AI assistant. Understand the true intent of the user's question: "${question}".
+2. Provide a clear, comprehensive, and empathetic answer. Do not give the same canned response to different questions. 
+3. Adapt your answer specifically to their location (${loc}), business (${cat}), and MoSJE scheme rules.
 4. Language required: ${language}.
-5. Do NOT give generic canned summaries. Plain text only, no markdown or asterisks.
+5. Format your response beautifully using markdown bullet points (-) and bold (**text**) to highlight key metrics or steps.
 `;
 
       for (const modelName of OFFICIAL_GEMINI_MODELS) {

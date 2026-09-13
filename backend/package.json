@@ -22,7 +22,8 @@
     "helmet": "^7.0.0",
     "localtunnel": "^2.0.2",
     "mongoose": "^8.3.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "node-telegram-bot-api": "^0.65.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.0"

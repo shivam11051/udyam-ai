@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+
 /**
  * @title MoSJELoanTracker
  * @dev Tracks the 10% margin escrow and 90% government loan disbursements 
- * for rural micro-entrepreneurs.
+ * for rural micro-entrepreneurs. Also implements Soulbound Tokens for On-Chain Credit Scoring.
  */
-contract MoSJELoanTracker {
+contract MoSJELoanTracker is ERC721URIStorage {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
     
     address public governmentSCA; // State Channelizing Agency
     address public pendingSCA;
@@ -23,19 +28,24 @@ contract MoSJELoanTracker {
     
     mapping(address => LoanAccount) public loans;
     
+    // SBT Mappings
+    mapping(address => uint256) public userSBT;
+    mapping(uint256 => uint256) public sbtLevel;
+    
     event MarginDeposited(address indexed entrepreneur, uint256 amount);
     event LoanApproved(address indexed entrepreneur, uint256 amount);
     event EMIPaid(address indexed entrepreneur, uint256 amount, uint256 remaining);
     event LoanClosed(address indexed entrepreneur);
     event SCATransferInitiated(address indexed previousSCA, address indexed newSCA);
     event SCATransferCompleted(address indexed previousSCA, address indexed newSCA);
+    event SBTLeveledUp(address indexed entrepreneur, uint256 tokenId, uint256 newLevel);
     
     modifier onlySCA() {
         require(msg.sender == governmentSCA, "Only SCA can perform this action");
         _;
     }
     
-    constructor() {
+    constructor() ERC721("UdyamCreditScore", "UCS") {
         governmentSCA = msg.sender;
     }
 
@@ -111,6 +121,24 @@ contract MoSJELoanTracker {
         
         emit EMIPaid(msg.sender, payment, loans[msg.sender].outstandingBalance);
 
+        // --- SBT CREDIT SCORING LOGIC ---
+        uint256 existingTokenId = userSBT[msg.sender];
+        if(existingTokenId == 0) {
+            // Mint new SBT Level 1
+            _tokenIds.increment();
+            uint256 newItemId = _tokenIds.current();
+            _mint(msg.sender, newItemId);
+            
+            userSBT[msg.sender] = newItemId;
+            sbtLevel[newItemId] = 1;
+            emit SBTLeveledUp(msg.sender, newItemId, 1);
+        } else {
+            // Level up existing SBT
+            sbtLevel[existingTokenId] += 1;
+            emit SBTLeveledUp(msg.sender, existingTokenId, sbtLevel[existingTokenId]);
+        }
+        // --------------------------------
+
         // Close loan and return margin if fully paid
         if(loans[msg.sender].outstandingBalance == 0) {
             loans[msg.sender].isActive = false;
@@ -129,5 +157,18 @@ contract MoSJELoanTracker {
         require(amount <= address(this).balance, "Insufficient balance");
         (bool success, ) = governmentSCA.call{value: amount}("");
         require(success, "Withdrawal failed");
+    }
+
+    // --- SOULBOUND LOGIC ---
+    // Override _beforeTokenTransfer to prevent transfers (make it Soulbound)
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 batchSize
+    ) internal virtual override {
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
+        // If from is address(0), it's a mint. Otherwise, revert.
+        require(from == address(0), "UdyamCreditScore: Token is SOULBOUND and cannot be transferred.");
     }
 }

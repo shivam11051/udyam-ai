@@ -30,6 +30,7 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true })); // Required for Twilio Webhooks
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -46,10 +47,12 @@ const usersRouter = require("./routes/users");
 const historyRouter = require("./routes/history");
 const analyticsRouter = require("./routes/analytics");
 
+
 app.use("/api/ai", aiRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/history", historyRouter);
 app.use("/api/analytics", analyticsRouter);
+
 
 // ── 4. HEALTH CHECK ───────────────────────────────────────────────
 app.get("/health", (req, res) => {
@@ -91,3 +94,6 @@ if (process.env.MONGODB_URI) {
     logger.info(`🚀 Server running on port ${PORT}`);
   });
 }
+
+// ── 6. INITIALIZE TELEGRAM BOT ────────────────────────────────────
+require("./controllers/telegramController");

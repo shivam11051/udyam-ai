@@ -6,6 +6,7 @@ import { Link, Wallet, CheckCircle, ShieldCheck, ChevronRight } from "lucide-rea
 export default function EMIScreen() {
   const { contract, account, isAdmin, addNotif } = useContext(AppContext);
   const [loanData, setLoanData] = useState(null);
+  const [sbtScore, setSbtScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [projectCostInput, setProjectCostInput] = useState("");
   const [emiInput, setEmiInput] = useState("");
@@ -21,8 +22,15 @@ export default function EMIScreen() {
     try {
       const data = await contract.loans(account);
       setLoanData(data);
+      
+      // Fetch SBT Credit Score Level
+      const tokenId = await contract.userSBT(account);
+      if (tokenId > 0n) {
+        const level = await contract.sbtLevel(tokenId);
+        setSbtScore(Number(level));
+      }
     } catch (e) {
-      console.error(e);
+      console.error("Error fetching loan data:", e);
     }
   };
 
@@ -208,6 +216,23 @@ export default function EMIScreen() {
 
           {/* Side Info Column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            
+            {/* SBT Credit Score Widget */}
+            {sbtScore > 0 && (
+              <div className="card" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, #FFF5E5, #FFE4B5)', border: '1px solid #FFD070' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ fontSize: '2.5rem' }}>🏆</div>
+                  <div>
+                    <h4 style={{ margin: 0, color: '#D97706', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Udyam Credit Score</h4>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#92400E' }}>Level {sbtScore} SBT</div>
+                  </div>
+                </div>
+                <p style={{ margin: '1rem 0 0 0', fontSize: '0.8rem', color: '#B45309', lineHeight: '1.4' }}>
+                  Your on-chain repayment history. Higher levels unlock lower interest rates for future MoSJE loans.
+                </p>
+              </div>
+            )}
+
             <div className="card" style={{ padding: '1.5rem' }}>
               <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem' }}>Financial Ledger</h4>
               

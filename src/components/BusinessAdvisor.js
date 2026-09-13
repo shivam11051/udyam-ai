@@ -2,6 +2,44 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, StopCircle, Bot, MapPin, Store, Flag } from 'lucide-react';
 import './BusinessAdvisor.css';
 
+// Simple Markdown Parser for Feasibility Report
+const renderMarkdown = (text) => {
+  if (!text) return null;
+  
+  const lines = text.split('\n');
+  return lines.map((line, idx) => {
+    // Check if it's a bullet point
+    const isBullet = line.trim().startsWith('- ') || line.trim().startsWith('* ');
+    const cleanedLine = isBullet ? line.trim().substring(2) : line;
+    
+    // Parse bold text **text**
+    const parts = cleanedLine.split(/(\*\*.*?\*\*)/g);
+    
+    const formattedLine = parts.map((part, pIdx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={pIdx} style={{ color: '#0071E3' }}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+
+    if (isBullet) {
+      return (
+        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+          <span style={{ marginRight: '0.5rem', color: '#0071E3' }}>•</span>
+          <span>{formattedLine}</span>
+        </div>
+      );
+    }
+    
+    // Empty lines
+    if (cleanedLine.trim() === '') {
+      return <br key={idx} />;
+    }
+    
+    return <p key={idx} style={{ margin: '0 0 10px 0', lineHeight: '1.5' }}>{formattedLine}</p>;
+  });
+};
+
 // Interactive Local Market Analysis Map Component
 const LocalMarketMap = ({ mapData, location }) => {
   const [activeTab, setActiveTab] = useState('all');
@@ -260,6 +298,7 @@ const BusinessAdvisor = ({ onApply }) => {
       if (lower.includes('marathi') || lower.includes('मराठी')) return 'Marathi';
       if (lower.includes('tamil') || lower.includes('तमिल')) return 'Tamil';
       if (lower.includes('telugu') || lower.includes('तेलगु')) return 'Telugu';
+      if (lower.includes('bengali') || lower.includes('বাংলা')) return 'Bengali';
       return 'English';
     }
 
@@ -316,6 +355,8 @@ const BusinessAdvisor = ({ onApply }) => {
         utterance.lang = 'hi-IN';
       } else if (currentLanguage === 'Marathi') {
         utterance.lang = 'mr-IN';
+      } else if (currentLanguage === 'Bengali') {
+        utterance.lang = 'bn-IN';
       } else {
         utterance.lang = 'en-IN';
       }
@@ -345,6 +386,7 @@ const BusinessAdvisor = ({ onApply }) => {
     const utterance = new SpeechSynthesisUtterance(textContent);
     if (formData.language === 'Hindi') utterance.lang = 'hi-IN';
     else if (formData.language === 'Marathi') utterance.lang = 'mr-IN';
+    else if (formData.language === 'Bengali') utterance.lang = 'bn-IN';
     else utterance.lang = 'en-IN';
 
     utterance.onend = () => setActiveReadingCard(null);
@@ -375,6 +417,7 @@ const BusinessAdvisor = ({ onApply }) => {
     else if (currentLanguage === 'Marathi') recognition.lang = 'mr-IN';
     else if (currentLanguage === 'Tamil') recognition.lang = 'ta-IN';
     else if (currentLanguage === 'Telugu') recognition.lang = 'te-IN';
+    else if (currentLanguage === 'Bengali') recognition.lang = 'bn-IN';
     else recognition.lang = 'en-IN';
 
     setListeningField(fieldName);
@@ -481,7 +524,7 @@ const BusinessAdvisor = ({ onApply }) => {
     setAutoFlowActive(true);
     setAutoFlowStepIndex(0);
 
-    const initialLangPrompt = "Welcome to Guided Voice Mode! Which language would you like to speak in? Hindi, Marathi, or English?";
+    const initialLangPrompt = "Welcome to Guided Voice Mode! Which language would you like to speak in? Hindi, Marathi, Bengali, or English?";
 
     triggerAutomaticVoicePrompt(initialLangPrompt, () => {
       setTimeout(() => {
@@ -578,6 +621,7 @@ const BusinessAdvisor = ({ onApply }) => {
 
     if (formData.language === 'Hindi') recognition.lang = 'hi-IN';
     else if (formData.language === 'Marathi') recognition.lang = 'mr-IN';
+    else if (formData.language === 'Bengali') recognition.lang = 'bn-IN';
     else recognition.lang = 'en-IN';
 
     setQaListening(true);
@@ -639,6 +683,7 @@ const BusinessAdvisor = ({ onApply }) => {
     
     if (formData.language === 'Hindi') utterance.lang = 'hi-IN';
     else if (formData.language === 'Marathi') utterance.lang = 'mr-IN';
+    else if (formData.language === 'Bengali') utterance.lang = 'bn-IN';
     else utterance.lang = 'en-IN';
 
     utterance.onend = () => setIsSpeaking(false);
@@ -854,6 +899,7 @@ const BusinessAdvisor = ({ onApply }) => {
                   <option value="English">English</option>
                   <option value="Hindi">Hindi (हिंदी)</option>
                   <option value="Marathi">Marathi (मराठी)</option>
+                  <option value="Bengali">Bengali (বাংলা)</option>
                   <option value="Tamil">Tamil (தமிழ்)</option>
                   <option value="Telugu">Telugu (తెలుగు)</option>
                 </select>
@@ -1160,7 +1206,7 @@ const BusinessAdvisor = ({ onApply }) => {
                   <span style={{ fontWeight: '700', color: '#0071E3', fontSize: '0.95rem' }}>💡 AI Voice Answer:</span>
                   <button className="close-node-btn" onClick={() => setQaAnswer(null)}>✕</button>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6', color: '#1D1D1F', fontWeight: '500' }}>{qaAnswer}</p>
+                <div style={{ margin: 0, fontSize: '0.95rem', color: '#1D1D1F', fontWeight: '500' }}>{renderMarkdown(qaAnswer)}</div>
                 <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#0071E3', fontWeight: '600' }}>
                   🔊 <em>Reading response out loud in {formData.language}...</em>
                 </div>
@@ -1179,7 +1225,7 @@ const BusinessAdvisor = ({ onApply }) => {
                   🔵 {report.confidenceScores?.marketReach || 88}% Confidence (AI Estimate)
                 </span>
               </div>
-              <p>{report.marketReach}</p>
+              <div className="parsed-markdown" style={{ fontSize: '0.95rem', color: '#1D1D1F' }}>{renderMarkdown(report.marketReach)}</div>
             </div>
             
             <div 
@@ -1192,7 +1238,7 @@ const BusinessAdvisor = ({ onApply }) => {
                   🔵 {report.confidenceScores?.opportunityAnalysis || 85}% Confidence (AI Estimate)
                 </span>
               </div>
-              <p>{report.opportunityAnalysis}</p>
+              <div className="parsed-markdown" style={{ fontSize: '0.95rem', color: '#1D1D1F' }}>{renderMarkdown(report.opportunityAnalysis)}</div>
             </div>
             
             <div 
@@ -1205,7 +1251,7 @@ const BusinessAdvisor = ({ onApply }) => {
                   🔵 {report.confidenceScores?.productMarketValue || 89}% Confidence (AI Estimate)
                 </span>
               </div>
-              <p>{report.productMarketValue}</p>
+              <div className="parsed-markdown" style={{ fontSize: '0.95rem', color: '#1D1D1F' }}>{renderMarkdown(report.productMarketValue)}</div>
             </div>
             
             <div 
@@ -1218,7 +1264,7 @@ const BusinessAdvisor = ({ onApply }) => {
                   🔵 {report.confidenceScores?.threatsIdentification || 87}% Confidence (Risk Model)
                 </span>
               </div>
-              <p>{report.threatsIdentification}</p>
+              <div className="parsed-markdown" style={{ fontSize: '0.95rem', color: '#1D1D1F' }}>{renderMarkdown(report.threatsIdentification)}</div>
             </div>
             
             <div 
@@ -1231,7 +1277,7 @@ const BusinessAdvisor = ({ onApply }) => {
                   🔵 {report.confidenceScores?.competitorMapping || 86}% Confidence (Density Model)
                 </span>
               </div>
-              <p>{report.competitorMapping}</p>
+              <div className="parsed-markdown" style={{ fontSize: '0.95rem', color: '#1D1D1F' }}>{renderMarkdown(report.competitorMapping)}</div>
             </div>
 
             <div 
@@ -1245,7 +1291,7 @@ const BusinessAdvisor = ({ onApply }) => {
                   🟢 {report.confidenceScores?.mosjeEligibility || 98}% Confidence (Verified Govt Policy Engine)
                 </span>
               </div>
-              <p style={{ fontWeight: '500', color: '#1D1D1F' }}>{report.mosjeEligibility}</p>
+              <div className="parsed-markdown" style={{ fontWeight: '500', color: '#1D1D1F', fontSize: '0.95rem' }}>{renderMarkdown(report.mosjeEligibility)}</div>
             </div>
 
             <div 
