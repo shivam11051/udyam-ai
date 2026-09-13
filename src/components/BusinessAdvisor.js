@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, StopCircle, Bot, MapPin, Store, Flag } from 'lucide-react';
+import { Mic, StopCircle, Bot, MapPin, Store, Flag, ShieldAlert, FileText, CheckCircle } from 'lucide-react';
 import './BusinessAdvisor.css';
 
 // Simple Markdown Parser for Feasibility Report
@@ -248,6 +248,18 @@ const BusinessAdvisor = ({ onApply }) => {
   const [qaAnswer, setQaAnswer] = useState(null);
   const [qaLoading, setQaLoading] = useState(false);
   const [qaListening, setQaListening] = useState(false);
+  
+  // DigiLocker eKYC State
+  const [digiLockerStatus, setDigiLockerStatus] = useState('idle'); // idle, loading, verified
+
+  const handleDigiLockerVerify = () => {
+    setDigiLockerStatus('loading');
+    setTimeout(() => {
+      setDigiLockerStatus('verified');
+      setFormData(prev => ({ ...prev, aadhar: '✅ Verified via DigiLocker (ID: 7392-XXXX-XXXX)' }));
+    }, 2500); // simulate network delay
+  };
+
 
   // Active Recognition Reference to abort/stop speech instantly
   const activeRecognitionRef = useRef(null);
@@ -906,27 +918,49 @@ const BusinessAdvisor = ({ onApply }) => {
               </div>
 
               <div className="form-group full-width">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>Aadhar / Udyam Registration (Mock ID)</label>
-                  {speechSupported && (
-                    <button 
-                      type="button" 
-                      className={`stt-mic-btn ${listeningField === 'aadhar' ? 'listening' : ''}`}
-                      onClick={() => startVoiceInput('aadhar', 'Aadhar or Registration Number')}
-                      title="Speak Aadhar"
-                    >
-                      {listeningField === 'aadhar' ? <><Mic size={14} color="#FF453A" style={{marginRight: '6px'}}/> Listening...</> : <><Mic size={14} style={{marginRight: '6px'}}/> Speak</>}
-                    </button>
-                  )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <label style={{ margin: 0 }}>Aadhar / Udyam eKYC</label>
+                  <span style={{ fontSize: '0.8rem', color: '#1B8A3A', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}>
+                    <ShieldAlert size={14} color="#1B8A3A"/> Government Secure
+                  </span>
                 </div>
-                <input 
-                  type="text" 
-                  name="aadhar"
-                  placeholder="XXXX-XXXX-XXXX"
-                  value={formData.aadhar}
-                  onChange={handleChange}
-                  required
-                />
+                
+                {digiLockerStatus === 'idle' && (
+                  <button 
+                    type="button" 
+                    onClick={handleDigiLockerVerify}
+                    style={{ 
+                      width: '100%', padding: '1rem', background: '#e0f5e4', 
+                      border: '2px dashed #30D158', color: '#1B8A3A', 
+                      borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold', 
+                      cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', transition: 'all 0.2s'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = '#d1f0d7'}
+                    onMouseOut={e => e.currentTarget.style.background = '#e0f5e4'}
+                  >
+                    <FileText size={18} /> Connect DigiLocker to Verify Identity
+                  </button>
+                )}
+
+                {digiLockerStatus === 'loading' && (
+                  <div style={{ width: '100%', padding: '1rem', background: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+                    <div className="spinner" style={{ width: '20px', height: '20px', borderTopColor: '#30D158', borderRightColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: 'transparent', borderWidth: '2px' }}></div>
+                    <span style={{ color: '#1D1D1F', fontWeight: '500' }}>Authenticating with UIDAI...</span>
+                  </div>
+                )}
+
+                {digiLockerStatus === 'verified' && (
+                  <div style={{ width: '100%', padding: '1rem', background: '#f0f9f0', border: '1px solid #30D158', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <CheckCircle size={24} color="#30D158" />
+                      <div>
+                        <div style={{ color: '#1D1D1F', fontWeight: 'bold', fontSize: '0.95rem' }}>Aadhaar Verified</div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '2px' }}>Name: Rural Entrepreneur • Category: OBC</div>
+                      </div>
+                    </div>
+                    <span style={{ background: '#30D158', color: 'white', padding: '0.25rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>eKYC COMPLETE</span>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
