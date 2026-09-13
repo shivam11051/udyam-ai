@@ -56,7 +56,7 @@ export default function AdminDashboard() {
                   if (tokenId > 0n) {
                     sbtLevel = Number(await contract.sbtLevel(tokenId));
                   }
-                } catch(e) {}
+                } catch(e) { /* ignore */ }
                 
                 approved.push({
                   address: addr,
@@ -91,7 +91,7 @@ export default function AdminDashboard() {
                   if (tokenId > 0n) {
                     sbtLevel = Number(await contract.sbtLevel(tokenId));
                   }
-                } catch(e) {}
+                } catch(e) { /* ignore */ }
                 
                 approved.push({
                   address: account,
