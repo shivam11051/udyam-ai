@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/udyam-ai/static/css/main.f478e250.css",
-    "main.js": "/udyam-ai/static/js/main.be2d48fb.js",
+    "main.js": "/udyam-ai/static/js/main.78c4ceaf.js",
     "static/js/453.472c8d9f.chunk.js": "/udyam-ai/static/js/453.472c8d9f.chunk.js",
     "index.html": "/udyam-ai/index.html",
     "main.f478e250.css.map": "/udyam-ai/static/css/main.f478e250.css.map",
-    "main.be2d48fb.js.map": "/udyam-ai/static/js/main.be2d48fb.js.map",
+    "main.78c4ceaf.js.map": "/udyam-ai/static/js/main.78c4ceaf.js.map",
     "453.472c8d9f.chunk.js.map": "/udyam-ai/static/js/453.472c8d9f.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.f478e250.css",
-    "static/js/main.be2d48fb.js"
+    "static/js/main.78c4ceaf.js"
   ]
 }
