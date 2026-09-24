@@ -176,7 +176,7 @@ udyam-ai/
 
 ## 👥 Team LedgerX
 
-Built for **Smart India Hackathon 2024** — Problem Statement PS26091 (MoSJE)
+Built for **Smart India Hackathon 2026** — Problem Statement PS26091 (MoSJE)
 
 ---
 
