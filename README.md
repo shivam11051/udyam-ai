@@ -7,6 +7,7 @@
 *Hyper-Local Intelligence · Multilingual Voice AI · Blockchain-Verified Loans*
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-GitHub_Pages-0071E3?style=for-the-badge)](https://shivam11051.github.io/udyam-ai)
+[![Telegram Bot](https://img.shields.io/badge/🤖_AI_Bot-@Udyamm__Bot-26A5E4?style=for-the-badge&logo=telegram)](https://t.me/Udyamm_Bot)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)](https://reactjs.org/)
 [![Ethereum](https://img.shields.io/badge/Ethereum-Sepolia-627EEA?style=flat-square&logo=ethereum)](https://sepolia.etherscan.io/)
 [![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
@@ -18,6 +19,25 @@
 ## 📸 Overview
 
 UdyamAI solves critical financial inclusion and micro-business planning challenges faced by rural micro-entrepreneurs in India. It combines a **Conversational Multilingual AI Advisory Layer** with **Ethereum Smart Contracts** to provide data-backed feasibility analysis, automated MoSJE scheme matching, and eliminates middleman risk in government loan disbursements.
+
+---
+
+## 🤖 Try UdyamAI on Telegram
+
+> **[@Udyamm_Bot](https://t.me/Udyamm_Bot)** — Our live AI assistant is available directly on Telegram!
+
+```
+https://t.me/Udyamm_Bot
+```
+
+Chat with **UdyamAI** right now to:
+- 💡 Get personalised rural business ideas
+- 📜 Discover government schemes (NSFDC, NBCFDC, MoSJE)
+- 💰 Get loan & interest rate guidance
+- 🌍 Ask in **Hindi, Bengali, Tamil, Telugu, Marathi or English**
+- 📊 Understand margin money & project cost calculations
+
+No app download needed — works on any device with Telegram installed.
 
 ---
 
