@@ -1,6 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, memo } from 'react';
 import { Mic, StopCircle, Bot, MapPin, Store, Flag, ShieldAlert, FileText, CheckCircle } from 'lucide-react';
 import './BusinessAdvisor.css';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 // Advanced Markdown Parser for Feasibility Report & QA
 const renderMarkdown = (text) => {
@@ -72,149 +75,240 @@ const renderMarkdown = (text) => {
   });
 };
 
-// Interactive Local Market Analysis Map Component
-const LocalMarketMap = ({ mapData, location }) => {
-  const [activeTab, setActiveTab] = useState('all');
-  const [selectedNode, setSelectedNode] = useState(null);
+// Interactive Local Market Analysis Map Component (Leaflet)
+// Custom SVG Icons for Leaflet
+const createCustomIcon = (color, type) => {
+  const isCompetitor = type === 'competitor';
+  const html = `
+    <div style="
+      background-color: ${color};
+      width: 24px;
+      height: 24px;
+      border-radius: ${isCompetitor ? '4px' : '50%'};
+      border: 3px solid white;
+      box-shadow: 0 0 10px ${color};
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 12px;
+      transform: translate(-50%, -50%);
+    ">
+      ${isCompetitor ? '🚩' : '🏬'}
+    </div>
+  `;
+  return L.divIcon({
+    html,
+    className: 'custom-leaflet-icon',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+};
 
-  const consumerHubs = mapData?.consumerHubs || [
+const enterpriseIcon = L.divIcon({
+  html: `<div style="font-size:24px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">📍</div>`,
+  className: 'custom-leaflet-icon',
+  iconSize: [24, 24],
+  iconAnchor: [12, 24]
+});
+
+// Pre-create stable icon instances — NEVER create these inside render (causes marker flicker)
+const hubIcon = createCustomIcon('#30D158', 'hub');
+const competitorIcon = createCustomIcon('#FF9F0A', 'competitor');
+
+// Helper component to update map view dynamically
+const MapUpdater = ({ center }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (center && center[0] !== 0) {
+      map.flyTo(center, 15, { duration: 2 });
+    }
+  }, [center, map]);
+  return null;
+};
+
+// Memoized: only re-renders when location, pincode, or mapData reference changes
+function LocalMarketMapInner({ mapData, location, pincode }) {
+  const [centerCoords, setCenterCoords] = useState([20.5937, 78.9629]); // Default to India center
+  const [loadingCoords, setLoadingCoords] = useState(false);
+
+  // Fetch coordinates based on pincode first (most precise), then location name
+  useEffect(() => {
+    if (!location && !pincode) return;
+    
+    let isMounted = true;
+    const fetchCoords = async () => {
+      setLoadingCoords(true);
+      try {
+        let data = null;
+
+        // STRATEGY 1: Use pincode (India postal code) — most precise
+        if (pincode && pincode.length === 6) {
+          const pincodeRes = await fetch(
+            `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(pincode)}&countrycodes=in&format=json&limit=1&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          data = await pincodeRes.json();
+        }
+
+        // STRATEGY 2: Use location text scoped strictly to India
+        if ((!data || data.length === 0) && location) {
+          // Append ", India" to force scope to correct country
+          const query = location.toLowerCase().includes('india') ? location : `${location}, India`;
+          const locRes = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=in&format=json&limit=3&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const locData = await locRes.json();
+          // Pick the result that best matches a city/village/district in India
+          if (locData && locData.length > 0) {
+            const best = locData.find(r => 
+              ['city', 'town', 'village', 'administrative', 'municipality', 'district'].includes(r.type) ||
+              r.class === 'boundary' || r.class === 'place'
+            ) || locData[0];
+            data = [best];
+          }
+        }
+
+        if (data && data.length > 0 && isMounted) {
+          setCenterCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+        }
+      } catch (err) {
+        console.error('Geocoding error', err);
+      } finally {
+        if (isMounted) setLoadingCoords(false);
+      }
+    };
+    
+    const timer = setTimeout(fetchCoords, 800);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [location, pincode]);
+
+  const consumerHubs = useMemo(() => mapData?.consumerHubs || [
     { name: "Local Block Haat / Market", distanceKm: 2.2, type: "High Demand Consumer Hub" },
     { name: "District Farmers Market", distanceKm: 5.1, type: "Primary Retail Channel" },
     { name: "Cooperative Supply Point", distanceKm: 4.5, type: "Distribution Node" }
-  ];
-  const competitorPins = mapData?.competitorPins || [
+  ], [mapData]);
+  
+  const competitorPins = useMemo(() => mapData?.competitorPins || [
     { name: "Existing Vendor Cluster A", distanceKm: 1.8, density: "Medium" },
     { name: "Unorganized Store B", distanceKm: 3.4, density: "Low" },
     { name: "Regional Supplier C", distanceKm: 6.2, density: "High" }
-  ];
+  ], [mapData]);
+
+  // Helper to generate jittered coords around center based on distance
+  const getOffsetCoords = (center, distanceKm, index, total) => {
+    const radiusInDegrees = distanceKm / 111; // 1 degree is roughly 111km
+    const angle = (index / total) * Math.PI * 2;
+    return [
+      center[0] + radiusInDegrees * Math.sin(angle),
+      center[1] + radiusInDegrees * Math.cos(angle)
+    ];
+  };
 
   return (
-    <div className="map-widget-card">
-      <div className="map-header">
+    <div className="map-widget-card" style={{ marginBottom: '2rem', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-light)', transform: 'translateZ(0)', isolation: 'isolate' }}>
+      <div className="map-header" style={{ padding: '1.5rem', background: 'var(--bg-main)' }}>
         <div>
-          <h4>📍 Map-Based Local Market & Competitor Analysis</h4>
-          <p className="map-subtitle">Hyper-local 5–10 km Geo-Radius Analysis for <strong>{location || "Target Location"}</strong></p>
-        </div>
-        <div className="map-toggle-group">
-          <button 
-            className={`map-toggle-btn ${activeTab === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveTab('all')}
-          >
-            🌐 Radius Overview
-          </button>
-          <button 
-            className={`map-toggle-btn ${activeTab === 'hubs' ? 'active' : ''}`}
-            onClick={() => setActiveTab('hubs')}
-          >
-            🏬 Consumer Hubs ({consumerHubs.length})
-          </button>
-          <button 
-            className={`map-toggle-btn ${activeTab === 'competitors' ? 'active' : ''}`}
-            onClick={() => setActiveTab('competitors')}
-          >
-            🚩 Competitor Nodes ({competitorPins.length})
-          </button>
-        </div>
-      </div>
-
-      <div className="map-canvas-container">
-        <svg viewBox="0 0 600 340" className="map-svg">
-          <defs>
-            <radialGradient id="radiusGradient" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#0071E3" stopOpacity="0.18" />
-              <stop offset="70%" stopColor="#BF5AF2" stopOpacity="0.08" />
-              <stop offset="100%" stopColor="#0071E3" stopOpacity="0.02" />
-            </radialGradient>
-            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-          </defs>
-
-          {/* Grid lines */}
-          <line x1="50" y1="170" x2="550" y2="170" stroke="#E5E5EA" strokeDasharray="4,4" />
-          <line x1="300" y1="40" x2="300" y2="300" stroke="#E5E5EA" strokeDasharray="4,4" />
-
-          {/* 10 km Outer Radius Circle */}
-          <circle cx="300" cy="170" r="140" fill="none" stroke="#D1D1D6" strokeDasharray="6,6" strokeWidth="1.5" />
-          <text x="445" y="165" fill="#86868B" fontSize="10" fontWeight="600">10 km Radius Boundary</text>
-
-          {/* 5 km Inner Radius Zone */}
-          <circle cx="300" cy="170" r="85" fill="url(#radiusGradient)" stroke="#0071E3" strokeWidth="2" strokeDasharray="3,3" />
-          <text x="390" y="165" fill="#0071E3" fontSize="10" fontWeight="600">5 km Core Radius Zone</text>
-
-          {/* Center Pin: Proposed Enterprise */}
-          <g transform="translate(300, 170)" cursor="pointer" onClick={() => setSelectedNode({ name: `Your Enterprise (${location})`, type: "Proposed Micro-Business Hub", distanceKm: 0 })}>
-            <circle r="16" fill="#0071E3" opacity="0.25" className="radar-pulse" />
-            <circle r="9" fill="#0071E3" filter="url(#glow)" />
-            <circle r="4" fill="#FFFFFF" />
-            <text x="0" y="24" textAnchor="middle" fill="#1D1D1F" fontSize="11" fontWeight="700">📍 Enterprise Center</text>
-          </g>
-
-          {/* Consumer Hub Pins */}
-          {(activeTab === 'all' || activeTab === 'hubs') && consumerHubs.map((hub, i) => {
-            const angle = (i * 120 + 35) * (Math.PI / 180);
-            const r = Math.min(130, hub.distanceKm * 15 + 35);
-            const cx = 300 + r * Math.cos(angle);
-            const cy = 170 + r * Math.sin(angle);
-            return (
-              <g key={`hub-${i}`} transform={`translate(${cx}, ${cy})`} cursor="pointer" onClick={() => setSelectedNode(hub)}>
-                <circle r="8" fill="#30D158" opacity="0.9" filter="url(#glow)" />
-                <circle r="4" fill="#FFFFFF" />
-                <text x="12" y="4" fill="#1D1D1F" fontSize="10" fontWeight="600">🏬 {hub.name} ({hub.distanceKm}km)</text>
-              </g>
-            );
-          })}
-
-          {/* Competitor Nodes */}
-          {(activeTab === 'all' || activeTab === 'competitors') && competitorPins.map((comp, i) => {
-            const angle = (i * 110 + 195) * (Math.PI / 180);
-            const r = Math.min(130, comp.distanceKm * 15 + 40);
-            const cx = 300 + r * Math.cos(angle);
-            const cy = 170 + r * Math.sin(angle);
-            return (
-              <g key={`comp-${i}`} transform={`translate(${cx}, ${cy})`} cursor="pointer" onClick={() => setSelectedNode(comp)}>
-                <polygon points="0,-8 7,6 -7,6" fill="#FF9F0A" />
-                <text x="12" y="4" fill="#1D1D1F" fontSize="10" fontWeight="600">🚩 {comp.name} ({comp.distanceKm}km)</text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* Interactive Tooltip Detail */}
-      {selectedNode && (
-        <div className="map-node-detail-banner">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: '700', color: '#1D1D1F' }}>📌 Selected Geo Node: {selectedNode.name}</span>
-            <button className="close-node-btn" onClick={() => setSelectedNode(null)}>✕</button>
-          </div>
-          <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#6E6E73' }}>
-            Distance: <strong>{selectedNode.distanceKm} km</strong> | Type / Density: <strong>{selectedNode.type || selectedNode.density || "High Potential"}</strong>
+          <h4 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            📍 Real-Time Market Heatmap
+          </h4>
+          <p className="map-subtitle" style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+            Dynamic Geo-Radius Analysis for <strong>{location || "Target Location"}</strong> 
+            {loadingCoords && <span style={{ marginLeft: '10px', color: '#0071E3' }}>Locating...</span>}
           </p>
         </div>
-      )}
+      </div>
 
-      <div className="map-legend">
-        <div className="legend-item"><span className="legend-dot center"></span> Proposed Enterprise Center</div>
-        <div className="legend-item"><span className="legend-dot hub"></span> High Demand Consumer Hub (5-10km)</div>
-        <div className="legend-item"><span className="legend-dot competitor"></span> Competitor / Vendor Cluster</div>
+      <div style={{ height: '450px', width: '100%', position: 'relative' }}>
+        <MapContainer center={centerCoords} zoom={13} style={{ height: '100%', width: '100%' }}>
+          {/* Esri World Imagery — satellite layer (free, no API key, Google Maps quality) */}
+          <TileLayer
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            attribution='Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, USDA FSA, USGS, Aerogrid, IGN, IGP, and the GIS User Community'
+            maxZoom={20}
+          />
+          {/* Esri World Boundaries & Places — street names / locality labels overlay */}
+          <TileLayer
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+            attribution=''
+            maxZoom={20}
+            opacity={1}
+          />
+          <MapUpdater center={centerCoords} />
+
+          {/* 10km Outer Zone */}
+          <Circle center={centerCoords} radius={10000} pathOptions={{ color: '#0071E3', fillColor: '#0071E3', fillOpacity: 0.05, weight: 1, dashArray: '5, 10' }} />
+          
+          {/* 5km Inner Core */}
+          <Circle center={centerCoords} radius={5000} pathOptions={{ color: '#BF5AF2', fillColor: '#BF5AF2', fillOpacity: 0.1, weight: 2 }} />
+
+          {/* Enterprise Center */}
+          <Marker position={centerCoords} icon={enterpriseIcon}>
+            <Popup>
+              <strong>Proposed Enterprise</strong><br/>
+              {location || "Selected Area"}
+            </Popup>
+          </Marker>
+
+          {/* Consumer Hubs (Green) */}
+          {consumerHubs.map((hub, i) => (
+            <Marker key={`hub-${i}`} position={getOffsetCoords(centerCoords, hub.distanceKm, i, consumerHubs.length)} icon={hubIcon}>
+              <Popup>
+                <strong>{hub.name}</strong><br/>
+                Distance: {hub.distanceKm}km<br/>
+                Type: {hub.type}
+              </Popup>
+            </Marker>
+          ))}
+
+          {/* Competitor Nodes (Orange/Red) */}
+          {competitorPins.map((comp, i) => (
+            <Marker key={`comp-${i}`} position={getOffsetCoords(centerCoords, comp.distanceKm, i + 0.5, competitorPins.length)} icon={competitorIcon}>
+              <Popup>
+                <strong>{comp.name}</strong><br/>
+                Distance: {comp.distanceKm}km<br/>
+                Density: {comp.density}
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
+
+      <div className="map-legend" style={{ display: 'flex', gap: '1rem', padding: '1rem 1.5rem', background: 'white', borderTop: '1px solid var(--border-light)', fontSize: '0.85rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ fontSize: '1.2rem' }}>📍</span> Enterprise Center</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#30D158', borderRadius: '50%' }}></div> Consumer Hub</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '12px', background: '#FF9F0A', borderRadius: '4px' }}></div> Competitor Node</div>
       </div>
     </div>
   );
-};
+}
+
+LocalMarketMapInner.displayName = 'LocalMarketMap';
+const LocalMarketMap = memo(LocalMarketMapInner);
 
 const BusinessAdvisor = ({ onApply }) => {
-  const [formData, setFormData] = useState({
-    location: '',
-    marginCapital: '',
-    businessCategory: '',
-    language: 'English',
-    socialCategory: 'SC',
-    annualIncome: '',
-    gender: 'Female',
-    age: '',
-    aadhar: ''
+  // Offline-First: Load initial state from localStorage if available
+  const [formData, setFormData] = useState(() => {
+    const savedForm = localStorage.getItem('udyam_form_state');
+    if (savedForm) {
+      try { return JSON.parse(savedForm); } catch(e) { console.warn(e); }
+    }
+    return {
+      location: '',
+      pincode: '',
+      marginCapital: '',
+      businessCategory: '',
+      language: 'English',
+      socialCategory: 'SC',
+      annualIncome: '',
+      gender: 'Female',
+      age: '',
+      aadhar: ''
+    };
   });
 
   const isMounted = useRef(true);
@@ -222,16 +316,55 @@ const BusinessAdvisor = ({ onApply }) => {
 
   useEffect(() => {
     formDataRef.current = formData;
+    localStorage.setItem('udyam_form_state', JSON.stringify(formData));
   }, [formData]);
 
   const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState(null);
-  const [financialPlan, setFinancialPlan] = useState(null);
+  const [report, setReport] = useState(() => {
+    const savedReport = localStorage.getItem('udyam_cached_report');
+    if (savedReport) {
+      try { return JSON.parse(savedReport); } catch(e) { console.warn(e); }
+    }
+    return null;
+  });
+  const [financialPlan, setFinancialPlan] = useState(() => {
+    const savedPlan = localStorage.getItem('udyam_cached_financials');
+    if (savedPlan) {
+      try { return JSON.parse(savedPlan); } catch(e) { console.warn(e); }
+    }
+    return null;
+  });
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  
+  // Offline status listener
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (report) {
+      localStorage.setItem('udyam_cached_report', JSON.stringify(report));
+    }
+  }, [report]);
+
+  useEffect(() => {
+    if (financialPlan) {
+      localStorage.setItem('udyam_cached_financials', JSON.stringify(financialPlan));
+    }
+  }, [financialPlan]);
   const [error, setError] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   
   // Voice Input (STT) & Error Modal State
   const [listeningField, setListeningField] = useState(null);
+  const [currentStep, setCurrentStep] = useState(1);
   const [speechSupported, setSpeechSupported] = useState(false);
   const [voiceErrorModal, setVoiceErrorModal] = useState({
     open: false,
@@ -245,15 +378,14 @@ const BusinessAdvisor = ({ onApply }) => {
   const [autoFlowStepIndex, setAutoFlowStepIndex] = useState(0);
 
   const completeVoiceSequence = [
-    { name: 'language', label: 'Language Preference', type: 'select' },
-    { name: 'aadhar', label: 'Aadhar or Registration Number', type: 'input' },
-    { name: 'location', label: 'Geographic Location', type: 'input' },
-    { name: 'businessCategory', label: 'Proposed Business Category', type: 'select' },
-    { name: 'marginCapital', label: 'Available Margin Capital Amount', type: 'input' },
-    { name: 'socialCategory', label: 'Social Target Category', type: 'select' },
-    { name: 'annualIncome', label: 'Annual Family Income', type: 'input' },
-    { name: 'gender', label: 'Applicant Gender', type: 'select' },
-    { name: 'age', label: 'Applicant Age', type: 'input' }
+    { name: 'language', label: 'Language Preference', type: 'select', step: 1 },
+    { name: 'socialCategory', label: 'Social Target Category', type: 'select', step: 2 },
+    { name: 'annualIncome', label: 'Annual Family Income', type: 'input', step: 2 },
+    { name: 'gender', label: 'Applicant Gender', type: 'select', step: 2 },
+    { name: 'age', label: 'Applicant Age', type: 'input', step: 2 },
+    { name: 'location', label: 'Geographic Location', type: 'input', step: 3 },
+    { name: 'businessCategory', label: 'Proposed Business Category', type: 'select', step: 3 },
+    { name: 'marginCapital', label: 'Available Margin Capital Amount', type: 'input', step: 3 }
   ];
 
   // Active Reading & Selective Speech State
@@ -350,8 +482,8 @@ const BusinessAdvisor = ({ onApply }) => {
     setVoiceErrorModal({ open: false, fieldName: '', fieldLabel: '', message: '' });
   };
 
-  const parseSpokenInput = (fieldName, text) => {
-    if (!text) return '';
+  const parseSpokenInput = (fieldName, text, currentValue) => {
+    if (!text) return currentValue;
     let cleaned = text.trim();
     const lower = cleaned.toLowerCase();
 
@@ -361,30 +493,34 @@ const BusinessAdvisor = ({ onApply }) => {
       if (lower.includes('tamil') || lower.includes('तमिल')) return 'Tamil';
       if (lower.includes('telugu') || lower.includes('तेलगु')) return 'Telugu';
       if (lower.includes('bengali') || lower.includes('বাংলা')) return 'Bengali';
-      return 'English';
+      if (lower.includes('english')) return 'English';
+      return currentValue; // Select fields should not accept raw text
     }
 
     if (fieldName === 'businessCategory') {
-      if (lower.includes('agri') || lower.includes('kheti') || lower.includes('किसान')) return 'Agriculture & Allied';
-      if (lower.includes('artisan') || lower.includes('handicraft') || lower.includes('शिल्प')) return 'Artisan / Handicraft';
+      if (lower.includes('agri') || lower.includes('kheti') || lower.includes('farm') || lower.includes('किसान')) return 'Agriculture & Allied';
+      if (lower.includes('artisan') || lower.includes('handicraft') || lower.includes('craft') || lower.includes('शिल्प')) return 'Artisan / Handicraft';
       if (lower.includes('retail') || lower.includes('kirana') || lower.includes('store') || lower.includes('दुकान')) return 'Retail / Kirana Store';
-      if (lower.includes('food') || lower.includes('processing')) return 'Food Processing';
-      if (lower.includes('textile') || lower.includes('apparel') || lower.includes('कपड़ा')) return 'Textile & Apparel';
-      if (lower.includes('service') || lower.includes('repair')) return 'Services / Repair Shop';
+      if (lower.includes('food') || lower.includes('processing') || lower.includes('खाना')) return 'Food Processing';
+      if (lower.includes('textile') || lower.includes('apparel') || lower.includes('clothes') || lower.includes('कपड़ा')) return 'Textile & Apparel';
+      if (lower.includes('service') || lower.includes('repair') || lower.includes('सेवा')) return 'Services / Repair Shop';
+      return currentValue;
     }
 
     if (fieldName === 'socialCategory') {
-      if (lower.includes('sc') || lower.includes('scheduled')) return 'SC';
+      if (lower.includes('sc') || lower.includes('scheduled caste') || lower.includes('dalit')) return 'SC';
       if (lower.includes('obc') || lower.includes('backward')) return 'OBC';
-      if (lower.includes('safai') || lower.includes('karamchari')) return 'Safai Karamchari';
-      if (lower.includes('dnt') || lower.includes('tribe')) return 'DNT';
-      if (lower.includes('general')) return 'General';
+      if (lower.includes('safai') || lower.includes('karamchari') || lower.includes('sweeper')) return 'Safai Karamchari';
+      if (lower.includes('dnt') || lower.includes('tribe') || lower.includes('nomad')) return 'DNT';
+      if (lower.includes('general') || lower.includes('unreserved') || lower.includes('सामान्य') || lower.includes('जनरल')) return 'General';
+      return currentValue;
     }
 
     if (fieldName === 'gender') {
-      if (lower.includes('female') || lower.includes('woman') || lower.includes('महिला')) return 'Female';
-      if (lower.includes('male') || lower.includes('man') || lower.includes('पुरुष')) return 'Male';
-      if (lower.includes('trans')) return 'Transgender';
+      if (lower.includes('female') || lower.includes('woman') || lower.includes('girl') || lower.includes('महिला') || lower.includes('aurat')) return 'Female';
+      if (lower.includes('male') || lower.includes('man') || lower.includes('boy') || lower.includes('पुरुष') || lower.includes('aadmi')) return 'Male';
+      if (lower.includes('trans') || lower.includes('other') || lower.includes('any')) return 'Transgender';
+      return currentValue;
     }
 
     if (['marginCapital', 'annualIncome', 'age', 'aadhar'].includes(fieldName)) {
@@ -396,13 +532,16 @@ const BusinessAdvisor = ({ onApply }) => {
         return val.toString();
       }
 
-      if (lower.includes("पचास हजार") || lower.includes("pachas hazar")) return "50000";
-      if (lower.includes("एक लाख") || lower.includes("ek lakh")) return "100000";
-      if (lower.includes("दो लाख") || lower.includes("do lakh")) return "200000";
-      if (lower.includes("ढाई लाख") || lower.includes("dhai lakh")) return "250000";
-      if (lower.includes("तीन लाख") || lower.includes("teen lakh")) return "300000";
-      if (lower.includes("बीस हजार") || lower.includes("bees hazar")) return "20000";
-      if (lower.includes("तीस हजार") || text.includes("tees hazar")) return "30000";
+      if (lower.includes("पचास हजार") || lower.includes("pachas hazar") || lower.includes("fifty thousand")) return "50000";
+      if (lower.includes("एक लाख") || lower.includes("ek lakh") || lower.includes("one lakh")) return "100000";
+      if (lower.includes("दो लाख") || lower.includes("do lakh") || lower.includes("two lakh")) return "200000";
+      if (lower.includes("ढाई लाख") || lower.includes("dhai lakh") || lower.includes("two and a half lakh")) return "250000";
+      if (lower.includes("तीन लाख") || lower.includes("teen lakh") || lower.includes("three lakh")) return "300000";
+      if (lower.includes("बीस हजार") || lower.includes("bees hazar") || lower.includes("twenty thousand")) return "20000";
+      if (lower.includes("तीस हजार") || lower.includes("tees hazar") || lower.includes("thirty thousand")) return "30000";
+      
+      // If numbers field didn't find numbers, don't overwrite with raw words
+      return currentValue;
     }
     
     return cleaned.replace(/\.$/, '');
@@ -517,6 +656,11 @@ const BusinessAdvisor = ({ onApply }) => {
     else if (currentLanguage === 'Bengali') recognition.lang = 'bn-IN';
     else recognition.lang = 'en-IN';
 
+    const targetItem = completeVoiceSequence.find(item => item.name === fieldName);
+    if (targetItem) {
+      setCurrentStep(targetItem.step);
+    }
+
     setListeningField(fieldName);
     setVoiceErrorModal({ open: false, fieldName: '', fieldLabel: '', message: '' });
 
@@ -533,8 +677,10 @@ const BusinessAdvisor = ({ onApply }) => {
       }
       const activeText = capturedText || interim;
       if (activeText) {
-        const parsed = parseSpokenInput(fieldName, activeText);
-        setFormData(prev => ({ ...prev, [fieldName]: parsed }));
+        setFormData(prev => {
+          const parsed = parseSpokenInput(fieldName, activeText, prev[fieldName]);
+          return { ...prev, [fieldName]: parsed };
+        });
       }
     };
 
@@ -894,6 +1040,13 @@ const BusinessAdvisor = ({ onApply }) => {
     }
     setFinancialPlan(financials);
 
+    if (isOffline) {
+      setError("You are currently offline. Your form data is saved, and we will generate your report automatically when internet is restored.");
+      setLoading(false);
+      // Wait for sync logic could go here
+      return;
+    }
+
     try {
       const baseUrl = process.env.REACT_APP_BACKEND_URL || 'https://counting-semiconductor-alien-layout.trycloudflare.com';
       const apiUrl = baseUrl + '/api/ai/advisor';
@@ -941,51 +1094,96 @@ const BusinessAdvisor = ({ onApply }) => {
         </div>
       )}
 
-      <h1 className="title">AI Business Advisory & Financial Structuring</h1>
-      <p className="subtitle">Empowering Rural Micro-Entrepreneurs (MoSJE SIH 2026 Initiative)</p>
-
-      {/* Voice Input Assistance & Hands-Free Flow Banner */}
-      <div className="voice-assistance-banner">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '1.4rem' }}>🎙️</span>
-            <div>
-              <strong>Complete Hands-Free Voice Mode ({formData.language})</strong>
-              <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
-                {autoFlowActive 
-                  ? `Step ${autoFlowStepIndex + 1} of 9: Continuous voice flow active for ${completeVoiceSequence[autoFlowStepIndex]?.label}...` 
-                  : "Click 'Start Hands-Free Voice Flow' to speak ALL 9 form sections continuously from start to end in your language!"
-                }
+      <div className="advisor-grid">
+        <div className="input-section card">
+          
+          <div className="wizard-header-logo" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <svg width="42" height="42" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: '12px' }}>
+                  <defs>
+                    <linearGradient id="udyamGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#00C6FF" />
+                      <stop offset="100%" stopColor="#30D158" />
+                    </linearGradient>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                      <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  {/* U shape */}
+                  <path d="M 16 16 L 16 38 C 16 48 24 54 32 54 C 36 54 40 52.5 43 50" stroke="#00C6FF" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" filter="url(#glow)"/>
+                  {/* Trending upward sprout/checkmark */}
+                  <path d="M 32 54 C 44 54 48 40 48 28 L 48 10 M 48 10 L 36 10 M 48 10 L 48 22" stroke="url(#udyamGrad)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" filter="url(#glow)"/>
+                  {/* Small Brain/AI node */}
+                  <circle cx="48" cy="10" r="5" fill="#30D158" filter="url(#glow)"/>
+                </svg>
+                <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: '800', background: 'linear-gradient(90deg, #FFFFFF, #E2E8F0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.5px' }}>Udyam AI</h2>
               </div>
+            </div>
+            <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Business Setup Wizard
             </div>
           </div>
 
-          {speechSupported && (
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button 
-                type="button" 
-                className={`guided-flow-btn ${autoFlowActive ? 'active' : ''}`}
-                onClick={autoFlowActive ? stopAllVoice : startGuidedVoiceFlow}
-              >
-                {autoFlowActive ? "🛑 Stop Auto-Flow" : "⚡ Start Complete Hands-Free Voice Flow (All 9 Steps)"}
-              </button>
+          {/* Voice Input Assistance & Hands-Free Flow Banner - Now Sleeker inside card */}
+          <div className="voice-assistance-banner" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '1rem 1.25rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>🎙️</span>
+                <div>
+                  <strong style={{ color: 'white' }}>Hands-Free Voice Mode ({formData.language})</strong>
+                  <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
+                    {autoFlowActive 
+                      ? `Step ${autoFlowStepIndex + 1} of 9: Continuous voice flow active for ${completeVoiceSequence[autoFlowStepIndex]?.label}...` 
+                      : "Speak ALL 9 form sections continuously from start to end in your language!"
+                    }
+                  </div>
+                </div>
+              </div>
 
-              {isVoiceActive && (
-                <button type="button" className="btn-stop-voice-master" onClick={stopAllVoice}>
-                  🛑 Stop All Voice
-                </button>
+              {speechSupported && (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button 
+                    type="button" 
+                    className={`guided-flow-btn ${autoFlowActive ? 'active' : ''}`}
+                    onClick={autoFlowActive ? stopAllVoice : startGuidedVoiceFlow}
+                    style={{ padding: '0.6rem 1rem', fontSize: '0.85rem', fontWeight: '600' }}
+                  >
+                    {autoFlowActive ? "🛑 Stop Auto-Flow" : "⚡ Start Complete Voice Flow"}
+                  </button>
+                  {isVoiceActive && (
+                    <button type="button" className="btn-stop-voice-master" onClick={stopAllVoice} style={{ padding: '0.6rem 1rem', fontSize: '0.85rem' }}>
+                      🛑 Stop
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
-      </div>
-      
-      <div className="advisor-grid">
-        <div className="input-section card">
-          <h3>Applicant & Business Details</h3>
+          </div>
+
+          <h1 style={{ fontSize: '1.8rem', fontWeight: '700', color: 'white', marginBottom: '0.5rem' }}>
+            {currentStep === 1 ? 'Step 1: Welcome to Udyam AI' : currentStep === 2 ? 'Step 2: Applicant Profile' : 'Step 3: Describe Your Rural Venture'}
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', marginBottom: '2rem' }}>
+            {currentStep === 1 ? 'Let\'s set up your language and verify your identity.' : currentStep === 2 ? 'Tell us a bit about yourself so we can find the best schemes.' : 'Help us understand your business idea by defining its core category and purpose.'}
+          </p>
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-              <div className="form-group full-width">
+
+            <div className="wizard-progress-bar">
+              <div className="progress-fill" style={{ width: `${(currentStep / 3) * 100}%` }}></div>
+            </div>
+            <div className="wizard-step-indicator">
+              <span className={currentStep >= 1 ? 'active' : ''}>1. Onboarding</span>
+              <span className={currentStep >= 2 ? 'active' : ''}>2. Profile</span>
+              <span className={currentStep >= 3 ? 'active' : ''}>3. Business</span>
+            </div>
+
+            <div style={{ display: currentStep === 1 ? 'grid' : 'none', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
+                            <div className="form-group full-width">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label>Language Preference for Voice & Report</label>
                   {speechSupported && (
@@ -1008,7 +1206,6 @@ const BusinessAdvisor = ({ onApply }) => {
                   <option value="Telugu">Telugu (తెలుగు)</option>
                 </select>
               </div>
-
               <div className="form-group full-width">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                   <label style={{ margin: 0 }}>Aadhar / Udyam eKYC</label>
@@ -1047,81 +1244,10 @@ const BusinessAdvisor = ({ onApply }) => {
                   </div>
                 )}
               </div>
+            </div>
 
-              <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>Geographic Location (Village/Block)</label>
-                  {speechSupported && (
-                    <button 
-                      type="button" 
-                      className={`stt-mic-btn ${listeningField === 'location' ? 'listening' : ''}`}
-                      onClick={() => startVoiceInput('location', 'Geographic Location')}
-                      title="Speak location"
-                    >
-                      {listeningField === 'location' ? <><Mic size={14} color="#FF453A" style={{marginRight: '6px'}}/> Listening...</> : <><Mic size={14} style={{marginRight: '6px'}}/> Speak</>}
-                    </button>
-                  )}
-                </div>
-                <input 
-                  type="text" 
-                  name="location"
-                  placeholder="e.g. Palghar, Maharashtra"
-                  value={formData.location}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>Proposed Business Category</label>
-                  {speechSupported && (
-                    <button 
-                      type="button" 
-                      className={`stt-mic-btn ${listeningField === 'businessCategory' ? 'listening' : ''}`}
-                      onClick={() => startVoiceInput('businessCategory', 'Proposed Business Category')}
-                      title="Speak category"
-                    >
-                      {listeningField === 'businessCategory' ? <><Mic size={14} color="#FF453A" style={{marginRight: '6px'}}/> Listening...</> : <><Mic size={14} style={{marginRight: '6px'}}/> Speak</>}
-                    </button>
-                  )}
-                </div>
-                <select name="businessCategory" value={formData.businessCategory} onChange={handleChange}>
-                  <option value="">Select Category</option>
-                  <option value="Agriculture & Allied">Agriculture & Allied</option>
-                  <option value="Artisan / Handicraft">Artisan / Handicraft</option>
-                  <option value="Retail / Kirana Store">Retail / Kirana Store</option>
-                  <option value="Food Processing">Food Processing</option>
-                  <option value="Textile & Apparel">Textile & Apparel</option>
-                  <option value="Services / Repair Shop">Services / Repair Shop</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>Available Margin Capital (₹) [10%]</label>
-                  {speechSupported && (
-                    <button 
-                      type="button" 
-                      className={`stt-mic-btn ${listeningField === 'marginCapital' ? 'listening' : ''}`}
-                      onClick={() => startVoiceInput('marginCapital', 'Margin Capital Amount')}
-                      title="Speak amount"
-                    >
-                      {listeningField === 'marginCapital' ? <><Mic size={14} color="#FF453A" style={{marginRight: '6px'}}/> Listening...</> : <><Mic size={14} style={{marginRight: '6px'}}/> Speak</>}
-                    </button>
-                  )}
-                </div>
-                <input 
-                  type="number" 
-                  name="marginCapital"
-                  placeholder="e.g. 50000"
-                  value={formData.marginCapital}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
+            <div style={{ display: currentStep === 2 ? 'grid' : 'none', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                            <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label>Social Category (MoSJE Target Group)</label>
                   {speechSupported && (
@@ -1143,31 +1269,6 @@ const BusinessAdvisor = ({ onApply }) => {
                   <option value="General">General</option>
                 </select>
               </div>
-
-              <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label>Annual Family Income (₹)</label>
-                  {speechSupported && (
-                    <button 
-                      type="button" 
-                      className={`stt-mic-btn ${listeningField === 'annualIncome' ? 'listening' : ''}`}
-                      onClick={() => startVoiceInput('annualIncome', 'Annual Family Income')}
-                      title="Speak income"
-                    >
-                      {listeningField === 'annualIncome' ? "🔴 Listening..." : "🎙️ Speak"}
-                    </button>
-                  )}
-                </div>
-                <input 
-                  type="number" 
-                  name="annualIncome"
-                  placeholder="e.g. 250000"
-                  value={formData.annualIncome}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label>Applicant Gender</label>
@@ -1188,7 +1289,6 @@ const BusinessAdvisor = ({ onApply }) => {
                   <option value="Transgender">Transgender</option>
                 </select>
               </div>
-
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label>Applicant Age</label>
@@ -1214,8 +1314,142 @@ const BusinessAdvisor = ({ onApply }) => {
                   required
                 />
               </div>
+              <div className="form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>Annual Family Income (₹)</label>
+                  {speechSupported && (
+                    <button 
+                      type="button" 
+                      className={`stt-mic-btn ${listeningField === 'annualIncome' ? 'listening' : ''}`}
+                      onClick={() => startVoiceInput('annualIncome', 'Annual Family Income')}
+                      title="Speak income"
+                    >
+                      {listeningField === 'annualIncome' ? "🔴 Listening..." : "🎙️ Speak"}
+                    </button>
+                  )}
+                </div>
+                <input 
+                  type="number" 
+                  name="annualIncome"
+                  placeholder="e.g. 250000"
+                  value={formData.annualIncome}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
             </div>
 
+            <div style={{ display: currentStep === 3 ? 'grid' : 'none', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                            <div className="form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>Geographic Location (Village/Block)</label>
+                  {speechSupported && (
+                    <button 
+                      type="button" 
+                      className={`stt-mic-btn ${listeningField === 'location' ? 'listening' : ''}`}
+                      onClick={() => startVoiceInput('location', 'Geographic Location')}
+                      title="Speak location"
+                    >
+                      {listeningField === 'location' ? <><Mic size={14} color="#FF453A" style={{marginRight: '6px'}}/> Listening...</> : <><Mic size={14} style={{marginRight: '6px'}}/> Speak</>}
+                    </button>
+                  )}
+                </div>
+                <input 
+                  type="text" 
+                  name="location"
+                  placeholder="e.g. Palghar, Maharashtra"
+                  value={formData.location}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            <div className="form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>Pincode (6-digit) <span style={{color:'#30D158',fontSize:'0.75rem',fontWeight:600}}>📍 Precise Map</span></label>
+                  {speechSupported && (
+                    <button 
+                      type="button" 
+                      className={`stt-mic-btn ${listeningField === 'pincode' ? 'listening' : ''}`}
+                      onClick={() => startVoiceInput('pincode', 'Pincode')}
+                      title="Speak pincode"
+                    >
+                      {listeningField === 'pincode' ? <><Mic size={14} color="#FF453A" style={{marginRight: '6px'}}/> Listening...</> : <><Mic size={14} style={{marginRight: '6px'}}/> Speak</>}
+                    </button>
+                  )}
+                </div>
+                <input 
+                  type="text" 
+                  name="pincode"
+                  placeholder="e.g. 205001 (Mainpuri)"
+                  value={formData.pincode || ''}
+                  onChange={handleChange}
+                  maxLength={6}
+                  inputMode="numeric"
+                />
+              </div>
+              <div className="form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>Proposed Business Category</label>
+                  {speechSupported && (
+                    <button 
+                      type="button" 
+                      className={`stt-mic-btn ${listeningField === 'businessCategory' ? 'listening' : ''}`}
+                      onClick={() => startVoiceInput('businessCategory', 'Proposed Business Category')}
+                      title="Speak category"
+                    >
+                      {listeningField === 'businessCategory' ? <><Mic size={14} color="#FF453A" style={{marginRight: '6px'}}/> Listening...</> : <><Mic size={14} style={{marginRight: '6px'}}/> Speak</>}
+                    </button>
+                  )}
+                </div>
+                <select name="businessCategory" value={formData.businessCategory} onChange={handleChange}>
+                  <option value="">Select Category</option>
+                  <option value="Agriculture & Allied">Agriculture & Allied</option>
+                  <option value="Artisan / Handicraft">Artisan / Handicraft</option>
+                  <option value="Retail / Kirana Store">Retail / Kirana Store</option>
+                  <option value="Food Processing">Food Processing</option>
+                  <option value="Textile & Apparel">Textile & Apparel</option>
+                  <option value="Services / Repair Shop">Services / Repair Shop</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>Available Margin Capital (₹) [10%]</label>
+                  {speechSupported && (
+                    <button 
+                      type="button" 
+                      className={`stt-mic-btn ${listeningField === 'marginCapital' ? 'listening' : ''}`}
+                      onClick={() => startVoiceInput('marginCapital', 'Margin Capital Amount')}
+                      title="Speak amount"
+                    >
+                      {listeningField === 'marginCapital' ? <><Mic size={14} color="#FF453A" style={{marginRight: '6px'}}/> Listening...</> : <><Mic size={14} style={{marginRight: '6px'}}/> Speak</>}
+                    </button>
+                  )}
+                </div>
+                <input 
+                  type="number" 
+                  name="marginCapital"
+                  placeholder="e.g. 50000"
+                  value={formData.marginCapital}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="wizard-navigation">
+              {currentStep > 1 && (
+                <button type="button" className="btn-secondary" onClick={() => setCurrentStep(currentStep - 1)}>
+                  Back
+                </button>
+              )}
+              
+              {currentStep < 3 && (
+                <button type="button" className="btn-primary wizard-next-btn" onClick={() => setCurrentStep(currentStep + 1)}>
+                  Continue
+                </button>
+              )}
+              
+              {currentStep === 3 && (
             <button 
               id="submit-feasibility-btn"
               type="submit" 
@@ -1225,6 +1459,8 @@ const BusinessAdvisor = ({ onApply }) => {
             >
               {loading ? "Generating Hyper-Local Report..." : "Generate Business Feasibility Report"}
             </button>
+              )}
+            </div>
           </form>
           {error && <div className="error-alert">{error}</div>}
         </div>
@@ -1283,7 +1519,7 @@ const BusinessAdvisor = ({ onApply }) => {
           </div>
           
           {/* Interactive Map Component */}
-          <LocalMarketMap mapData={report.mapData} location={formData.location} />
+          <LocalMarketMap mapData={report.mapData} location={formData.location} pincode={formData.pincode} />
 
           {/* Interactive AI Voice QA Query Assistant Bar */}
           <div className="qa-assistant-box">
@@ -1803,3 +2039,4 @@ const BusinessAdvisor = ({ onApply }) => {
 };
 
 export default BusinessAdvisor;
+

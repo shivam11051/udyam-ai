@@ -78,9 +78,7 @@ body {
 
 .sidebar {
   width: 270px;
-  background: rgba(20, 20, 35, 0.65); /* Glassmorphic base */
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: #14141f; /* Solid — removes the backdrop-filter GPU flicker */
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
@@ -90,6 +88,7 @@ body {
   z-index: 100;
   overflow-y: auto;
   animation: slideIn 0.5s var(--transition-smooth);
+  will-change: auto;
 }
 
 .sidebar::before {
@@ -147,12 +146,13 @@ body {
   position: absolute;
   left: 0;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scaleY(0);
+  transform-origin: center;
   width: 4px;
-  height: 0;
+  height: 70%;
   background: var(--accent-blue);
   border-radius: 0 4px 4px 0;
-  transition: height var(--transition-fast), box-shadow var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .nav-btn:hover {
@@ -172,7 +172,7 @@ body {
 }
 
 .nav-btn.active::before {
-  height: 70%;
+  transform: translateY(-50%) scaleY(1);
   box-shadow: 0 0 10px var(--accent-blue);
 }
 

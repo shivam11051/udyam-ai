@@ -1,53 +1,128 @@
-# Team LedgerX — UdyamAI
+# 🚀 UdyamAI — Team LedgerX
 
-**AI-Powered Financial Advisory for Rural Entrepreneurs**
-*From Ideas to Opportunities | Simple • Local • Trusted*
+<div align="center">
 
-UdyamAI solves critical financial inclusion and micro-business planning challenges faced by rural micro-entrepreneurs in India. By combining a **Conversational Multilingual AI Advisory Layer** with **Ethereum Smart Contracts**, the platform provides data-backed feasibility analysis, automated MoSJE scheme matching, and eliminates middleman risk in government loan disbursements.
+**AI-Powered Business Advisory Platform for Rural Entrepreneurs**
+
+*Hyper-Local Intelligence · Multilingual Voice AI · Blockchain-Verified Loans*
+
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-GitHub_Pages-0071E3?style=for-the-badge)](https://shivam11051.github.io/udyam-ai)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)](https://reactjs.org/)
+[![Ethereum](https://img.shields.io/badge/Ethereum-Sepolia-627EEA?style=flat-square&logo=ethereum)](https://sepolia.etherscan.io/)
+[![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
+
+</div>
+
+---
+
+## 📸 Overview
+
+UdyamAI solves critical financial inclusion and micro-business planning challenges faced by rural micro-entrepreneurs in India. It combines a **Conversational Multilingual AI Advisory Layer** with **Ethereum Smart Contracts** to provide data-backed feasibility analysis, automated MoSJE scheme matching, and eliminates middleman risk in government loan disbursements.
+
+---
+
+## ✨ What's New (v2.0 — Sep 2026)
+
+### 🗺️ Satellite Real-Time Market Heatmap
+- **Google Maps–quality satellite tiles** powered by Esri World Imagery (Maxar satellite data)
+- Street names, locality labels, and road names overlaid via Esri World Boundaries & Places
+- **Pincode-based precision geocoding** — enter a 6-digit Indian pincode for exact map targeting (no more wrong state!)
+- Two-strategy geocoder: Pincode → Location name, both scoped strictly to `countrycodes=in`
+- Interactive markers: Enterprise center, Consumer hubs (green), Competitor nodes (orange)
+- 5 km inner zone + 10 km outer geo-radius rings overlaid on satellite
+
+### 🎙️ Production-Ready Voice AI
+- Voice input on **every single form field** including the new Pincode field
+- Web Speech API with intelligent error recovery and browser permission handling
+- Full report read-aloud with per-section tap-to-listen (TTS)
+- AI Voice Q&A Assistant — ask any business question after report generation
+- Multilingual AI reports: English, Hindi, Bengali, Tamil, Telugu, Marathi
+
+### 🎨 Flagship Dark Neural UI
+- Premium dark glassmorphism aesthetic with neural network particle background
+- Udyam AI custom SVG logo with animated glow ring
+- 3-step guided wizard with progress indicator
+- Zero flickering — GPU-composited layers, no `backdrop-filter` on fixed elements
+- All hover animations use `transform: scale()` (no layout-thrashing `translateY`)
+- Sidebar uses solid `#14141f` background (removes Chromium's blur-on-fixed GPU bug)
+
+### ⚡ Performance & Stability
+- `React.memo` on map component — map never re-renders on parent state changes
+- Stable Leaflet icon instances pre-created at module level (zero marker flicker on zoom)
+- `useMemo` for marker coordinate arrays
+- No Service Worker in dev — eliminated HMR infinite reload loop
 
 ---
 
 ## 🎯 How It Addresses PS26091
-- **Market Reach Analysis:** Analyzes local opportunity within 5–10 km radius.
-- **SWOT & Threats:** Generates hyper-local SWOT, threats, and competitor-density signals for the chosen enterprise.
-- **Financial Structuring:** Project Cost = Margin ÷ 10%; Max Loan = 90% of Project Cost.
-- **Scheme Matching:** Auto-selects MoSJE scheme (e.g., NSFDC, NBCFDC), generates a moratorium-aware repayment schedule, and routes to nearby partners.
-- **Audit Hook:** Off-chain recommendation engine + on-chain audit hook gives low-cost, traceable referrals.
+
+| Requirement | UdyamAI Implementation |
+|---|---|
+| **Market Reach Analysis** | Satellite map with 5–10 km geo-radius, consumer hub & competitor pin overlays |
+| **SWOT & Threats** | Hyper-local SWOT, threats, and competitor-density signals per enterprise |
+| **Financial Structuring** | Project Cost = Margin ÷ 10%; Max Loan = 90% of Project Cost |
+| **Scheme Matching** | Auto-selects MoSJE scheme (NSFDC, NBCFDC), moratorium-aware EMI schedule |
+| **Audit Hook** | Off-chain AI engine + on-chain audit hook for low-cost, traceable referrals |
+| **Voice & Multilingual** | Web Speech API STT/TTS in 6 languages, every field voice-enabled |
+
+---
 
 ## 🧠 Innovation & Uniqueness
-- **Hyper-local + finance-first:** Advice tied directly to the user's capital and repayment capacity.
-- **Privacy-first routing:** On-chain credit history improves routing without exposing Personally Identifiable Information (PII) on-chain.
+
+- **Hyper-local + finance-first:** Advice tied directly to user capital, repayment capacity, and live local market conditions
+- **Satellite intelligence:** Real-time Esri/Maxar satellite imagery with locality-scoped geocoding to show the actual physical market around the user's village
+- **Privacy-first routing:** On-chain credit history improves routing without exposing PII on-chain
+- **Voice-first design:** Rural users with low digital literacy can complete the entire advisory flow by voice alone
 
 ---
 
 ## 📊 Feasibility and Viability
 
-- **Technical Feasibility:** Uses an existing React, Express, and smart-contract stack, augmented with AI advisory and map-based local market analysis.
-- **Economic Feasibility:** Low-cost off-chain computation minimizes blockchain gas costs while reducing dependence on expensive human consultants.
-- **Financial Viability:** Revenue generation through partner referrals, financial-institution partnerships, and premium advisory services, while keeping basic guidance accessible.
-- **Social Feasibility:** Multilingual, voice support makes it exceptionally easy for rural use (low digital literacy).
-- **Scalability:** Modular scheme and partner rules allow expansion across villages, districts, and states without changing the core architecture.
+| Dimension | Assessment |
+|---|---|
+| **Technical** | React + Express + Solidity stack; AI advisory + Leaflet satellite maps |
+| **Economic** | Off-chain AI minimizes gas costs; no expensive consultants needed |
+| **Financial** | Revenue via partner referrals, FI partnerships, premium advisory |
+| **Social** | Multilingual voice support for low-literacy rural users |
+| **Scalability** | Modular scheme/partner rules → expand across villages, districts, states |
 
 ---
 
 ## 🛠️ Challenges & Solutions
 
-| Challenge | Our Solution |
-| :--- | :--- |
-| **Stale Local Market Data** | Use data-freshness timestamps and confidence labels; clearly distinguish estimates from verified information. |
-| **Low Digital Literacy** | Provide multilingual voice guidance, simple forms, and assisted workflows for first-time users. |
-| **Privacy & Financial Data misuse** | Never store PII on-chain; use consent, hashed identifiers, and minimal on-chain referral records. |
-| **Limited Internet Connectivity** | Cache core workflows and reports, with low-bandwidth and offline-friendly interactions. |
-| **Scheme/Partner Info Changes** | Maintain modular scheme and partner rules with regular updates and validation. |
+| Challenge | Solution |
+|---|---|
+| **Wrong map location** | Pincode-first geocoding with `countrycodes=in` constraint; never guesses wrong state |
+| **Map flickering** | `React.memo` + stable pre-created Leaflet icons + GPU `translateZ(0)` on map container |
+| **App-wide flickering** | Removed `backdrop-filter` from `position: fixed` sidebar (Chromium GPU compositing bug) |
+| **Stale Market Data** | Data-freshness timestamps and confidence badges on every report card |
+| **Low Digital Literacy** | Voice input + multilingual TTS on every field and report section |
+| **Privacy & Financial misuse** | No PII on-chain; hashed identifiers, minimal on-chain referral records |
+| **Limited Connectivity** | localStorage form/report caching; online/offline status banner |
+| **Scheme Info Changes** | Modular scheme rules with regular validation |
 
 ---
 
 ## 💻 Tech Stack
-- **Frontend:** React.js, Lucide Icons, Modern CSS (Glassmorphism UI)
-- **Backend/AI:** Node.js, Express.js, Custom UdyamAI Model, Web Speech API
-- **Blockchain:** Ethereum (Sepolia Testnet), Solidity, Ethers.js, Hardhat
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 18, React-Leaflet, Lucide Icons, Custom CSS Glassmorphism |
+| **Maps** | Esri World Imagery (Maxar satellite) + Esri Boundaries & Places labels |
+| **Geocoding** | OpenStreetMap Nominatim API (pincode + location, India-scoped) |
+| **Voice** | Web Speech API (STT + TTS), multilingual |
+| **Backend / AI** | Node.js, Express.js, Gemini AI (custom UdyamAI persona) |
+| **Blockchain** | Ethereum Sepolia Testnet, Solidity, Ethers.js, Hardhat |
+| **Deployment** | GitHub Pages (frontend), Render (backend) |
+
+---
 
 ## ⚙️ How to Run Locally
+
+### Prerequisites
+- Node.js 18+
+- MetaMask browser extension
+- Backend API key in `.env`
 
 ### 1. Smart Contract Deployment
 ```bash
@@ -55,17 +130,56 @@ npx hardhat compile
 npx hardhat run scripts/deploy.js --network sepolia
 ```
 
-### 2. Backend (Custom AI)
+### 2. Backend (AI Engine)
 ```bash
 cd backend
 npm install
 node server.js
 ```
-*Runs on `localhost:5001`. Ensure your `.env` has valid API keys.*
+> Runs on `localhost:5001`. Ensure your `.env` has valid `GEMINI_API_KEY`.
 
 ### 3. Frontend (React DApp)
 ```bash
 npm install
 npm start
 ```
-*Runs on `localhost:3000`.*
+> Runs on `localhost:3000`. Connect MetaMask to Sepolia testnet.
+
+---
+
+## 🗂️ Project Structure
+
+```
+udyam-ai/
+├── src/
+│   ├── components/
+│   │   ├── BusinessAdvisor.js    # Main AI wizard + satellite map
+│   │   ├── BusinessAdvisor.css   # Dark neural glassmorphism UI
+│   │   ├── LandingPage.js        # Entry landing page
+│   │   ├── EMIScreen.js          # Loan EMI dashboard
+│   │   └── Logo.js               # Udyam AI SVG logo
+│   ├── App.js                    # App layout + sidebar navigation
+│   ├── App.css                   # Global styles
+│   └── index.js                  # React entry point
+├── backend/
+│   ├── server.js                 # Express API server
+│   └── controllers/
+│       └── aiController.js       # Gemini AI + multilingual prompts
+├── contracts/                    # Solidity smart contracts
+├── scripts/                      # Hardhat deployment scripts
+└── public/
+    ├── index.html
+    └── manifest.json
+```
+
+---
+
+## 👥 Team LedgerX
+
+Built for **Smart India Hackathon 2024** — Problem Statement PS26091 (MoSJE)
+
+---
+
+<div align="center">
+Made with ❤️ for India's rural entrepreneurs
+</div>

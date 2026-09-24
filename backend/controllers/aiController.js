@@ -44,6 +44,9 @@ const generateSmartFeasibilityReport = (reqBody = {}) => {
   }
 
   const isBengali = language === "Bengali";
+  const isTamil = language === "Tamil";
+  const isTelugu = language === "Telugu";
+  const isMarathi = language === "Marathi";
 
   const formattedMargin = marginCapital.toLocaleString('en-IN');
   const formattedCost = projectCost.toLocaleString('en-IN');
@@ -66,15 +69,75 @@ const generateSmartFeasibilityReport = (reqBody = {}) => {
       whatIfScenarios: 94
     },
     marketReach: isHindi
-      ? `**${location}** क्षेत्र के 5-10 किमी के दायरे में प्राथमिक और द्वितीयक उपभोक्ता बाजार का विस्तृत अध्ययन प्रस्तुत है:\n\n- **प्राथमिक लक्षित ग्राहक वर्ग**: आसपास की ग्रामीण आबादी और नजदीकी ब्लॉक हाट-बाजारों में प्रतिदिन **1,500 से अधिक** संभावित खरीदार सक्रिय हैं।\n- **वितरण चैनल**: उत्पाद/सेवा का वितरण 3 प्राथमिक चैनलों से होगा — प्रत्यक्ष रिटेल आउटलेट, नजदीकी किराना और सहकारी संघों के साथ थोक आपूर्ति समझौते, तथा महिला स्वयं सहायता समूहों (SHGs) के जरिए डोर-टू-डोर नेटवर्क।\n- **आपूर्ति श्रृंखला एवं लॉजिस्टिक्स**: ब्लॉक मुख्यालय से 10 किमी की परिधि में परिवहन लागत केवल **3-5%** रहती है, जिससे मार्जिन सुरक्षित रहता है और दैनिक कैश-फ्लो स्थिर रहता है।`
+      ? `**${location}** क्षेत्र के 5-10 किमी के दायरे में प्राथमिक और द्वितीयक उपभोक्ता बाजार का विस्तृत अध्ययन प्रस्तुत है:
+
+- **प्राथमिक लक्षित ग्राहक वर्ग**: आसपास की ग्रामीण आबादी और नजदीकी ब्लॉक हाट-बाजारों में प्रतिदिन **1,500 से अधिक** संभावित खरीदार सक्रिय हैं।
+- **वितरण चैनल**: उत्पाद/सेवा का वितरण 3 प्राथमिक चैनलों से होगा — प्रत्यक्ष रिटेल आउटलेट, नजदीकी किराना और सहकारी संघों के साथ थोक आपूर्ति समझौते, तथा महिला स्वयं सहायता समूहों (SHGs) के जरिए डोर-टू-डोर नेटवर्क।
+- **आपूर्ति श्रृंखला एवं लॉजिस्टिक्स**: ब्लॉक मुख्यालय से 10 किमी की परिधि में परिवहन लागत केवल **3-5%** रहती है, जिससे मार्जिन सुरक्षित रहता है और दैनिक कैश-फ्लो स्थिर रहता है।`
       : isBengali
-      ? `**${location}**-এর ৫-১০ কিমি এলাকার মধ্যে বাজার বিশ্লেষণ:\n\n- **লক্ষ্য গ্রাহক**: স্থানীয় হাট ও বাজারে প্রতিদিন **১,৫০০+** সম্ভাব্য ক্রেতা।\n- **বিতরণ ব্যবস্থা**: খুচরা আউটলেট এবং স্বনির্ভর গোষ্ঠীর (SHG) মাধ্যমে সরবরাহ।\n- **লজিস্টিক্স**: পরিবহন খরচ মাত্র **৩-৫%** হবে।`
-      : `Comprehensive market reach analysis for a 5–10 km catchment area around **${location}**:\n\n- **Immediate Target Demographics**: Over **1,500+ active daily consumers** in weekly block haats, local residential clusters, and nearby commercial junctions.\n- **Primary Distribution Channels**: Multi-tier reach comprising (a) Direct retail storefront for walk-in local customers, (b) B2B supply partnerships with regional Kirana & cooperative hubs, and (c) Hyper-local doorstep fulfillment through Self-Help Group (SHG) networks.\n- **Logistics & Sourcing Radius**: Sourcing within a 10 km radius minimizes freight overheads to under **4%** of gross sales, protecting operational margins and maintaining cash liquidity.`,
+      ? `**${location}**-এর ৫-১০ কিমি এলাকার মধ্যে বাজার বিশ্লেষণ:
+
+- **লক্ষ্য গ্রাহক**: স্থানীয় হাট ও বাজারে প্রতিদিন **১,৫০০+** সম্ভাব্য ক্রেতা।
+- **বিতরণ ব্যবস্থা**: খুচরা আউটলেট এবং স্বনির্ভর গোষ্ঠীর (SHG) মাধ্যমে সরবরাহ।
+- **লজিস্টিক্স**: পরিবহন খরচ মাত্র **৩-৫%** হবে।`
+      : isTamil
+      ? `**${location}**-க்கான சந்தை பகுப்பாய்வு (5-10 கி.மீ):
+
+- **இலக்கு வாடிக்கையாளர்கள்**: தினசரி **1,500+** வாடிக்கையாளர்கள் உள்ளூர் சந்தைகளில்.
+- **விநியோகம்**: நேரடி சில்லறை விற்பனை மற்றும் சுய உதவிக்குழுக்கள் (SHG) மூலம்.
+- **தளவாடங்கள்**: போக்குவரத்து செலவு வெறும் **3-5%** மட்டுமே.`
+      : isTelugu
+      ? `**${location}** కొరకు మార్కెట్ విశ్లేషణ (5-10 కి.మీ):
+
+- **లక్ష్య వినియోగదారులు**: రోజువారీ **1,500+** కొనుగోలుదారులు.
+- **పంపిణీ**: రిటైల్ మరియు స్వయం సహాయక బృందాల (SHG) ద్వారా.
+- **రవాణా**: రవాణా ఖర్చు కేవలం **3-5%** మాత్రమే.`
+      : isMarathi
+      ? `**${location}** परिसरातील ५-१० किमी मधील बाजार विश्लेषण:
+
+- **लक्षित ग्राहक**: स्थानिक बाजारात दररोज **१,५००+** संभाव्य खरेदीदार.
+- **वितरण**: किरकोळ विक्री आणि स्वयंसहाय्यता गट (SHG) द्वारे.
+- **लॉजिस्टिक्स**: वाहतूक खर्च फक्त **३-५%**.`
+      : `Comprehensive market reach analysis for a 5–10 km catchment area around **${location}**:
+
+- **Immediate Target Demographics**: Over **1,500+ active daily consumers** in weekly block haats, local residential clusters, and nearby commercial junctions.
+- **Primary Distribution Channels**: Multi-tier reach comprising (a) Direct retail storefront for walk-in local customers, (b) B2B supply partnerships with regional Kirana & cooperative hubs, and (c) Hyper-local doorstep fulfillment through Self-Help Group (SHG) networks.
+- **Logistics & Sourcing Radius**: Sourcing within a 10 km radius minimizes freight overheads to under **4%** of gross sales, protecting operational margins and maintaining cash liquidity.`,
     opportunityAnalysis: isHindi
-      ? `**${location}** के स्थानीय अर्थतंत्र में **${businessCategory}** के लिए अप्रयुक्त बाजार अवसरों का गहन विश्लेषण:\n\n- **बाजार अंतराल (Market Gap)**: **${location}** में वर्तमान में असंगठित और घटिया गुणवत्ता वाले आपूर्तिकर्ता सक्रिय हैं। संगठित, मानकीकृत और MoSJE प्रमाणित उद्यम के लिए **35% से अधिक** बाजार हिस्सेदारी तुरंत हासिल करने का अवसर है।\n- **मूल्य संवर्धन (Value Addition)**: कच्चे माल की प्रोसेसिंग और स्वच्छतापूर्ण पैकेजिंग से **15-20%** का अतिरिक्त ग्रॉस मार्जिन प्राप्त किया जा सकता है।\n- **डिजिटल एकीकरण**: यूपीआई (UPI) और क्यूआर-आधारित भुगतानों को अपनाकर युवा और मध्यम-आय वर्ग के 100% ग्राहकों को आकर्षित किया जा सकता है।`
+      ? `**${location}** के स्थानीय अर्थतंत्र में **${businessCategory}** के लिए अप्रयुक्त बाजार अवसरों का गहन विश्लेषण:
+
+- **बाजार अंतराल (Market Gap)**: **${location}** में वर्तमान में असंगठित और घटिया गुणवत्ता वाले आपूर्तिकर्ता सक्रिय हैं। संगठित, मानकीकृत और MoSJE प्रमाणित उद्यम के लिए **35% से अधिक** बाजार हिस्सेदारी तुरंत हासिल करने का अवसर है।
+- **मूल्य संवर्धन (Value Addition)**: कच्चे माल की प्रोसेसिंग और स्वच्छतापूर्ण पैकेजिंग से **15-20%** का अतिरिक्त ग्रॉस मार्जिन प्राप्त किया जा सकता है।
+- **डिजिटल एकीकरण**: यूपीआई (UPI) और क्यूआर-आधारित भुगतानों को अपनाकर युवा और मध्यम-आय वर्ग के 100% ग्राहकों को आकर्षित किया जा सकता है।`
       : isBengali
-      ? `**${location}**-এ **${businessCategory}**-এর সুযোগ:\n\n- **বাজারের অভাব**: অসংগঠিত বিক্রেতাদের কারণে **৩৫%+** বাজার দখলের সুযোগ রয়েছে।\n- **ভ্যালু অ্যাডিশন**: ভালো প্যাকেজিং-এর মাধ্যমে **১৫-২০%** বেশি লাভ।\n- **ডিজিটাল পেমেন্ট**: UPI ব্যবহার করে আরও গ্রাহক টানা সম্ভব।`
-      : `Localized Market Opportunity & Niche Analysis for **${businessCategory}** in **${location}**:\n\n- **Identified Market Gap**: Currently, the **${location}** block relies on unorganized vendors with inconsistent pricing and quality fluctuations. Establishing a structured, MoSJE-backed enterprise fills an immediate demand deficit with an estimated **35%+ market share capture potential**.\n- **Premium Margin Leverage**: Introducing standardized grading, hygienic packaging, and clear price tags yields an additional **15-20% margin premium** over informal competitors.\n- **Digital Payment Adoption**: Integrating UPI payments and digital order tracking unlocks friction-free transactions with local tech-savvy households and small business buyers.`,
+      ? `**${location}**-এ **${businessCategory}**-এর সুযোগ:
+
+- **বাজারের অভাব**: অসংগঠিত বিক্রেতাদের কারণে **৩৫%+** বাজার দখলের সুযোগ রয়েছে।
+- **ভ্যালু অ্যাডিশন**: ভালো প্যাকেজিং-এর মাধ্যমে **১৫-২০%** বেশি লাভ।
+- **ডিজিটাল পেমেন্ট**: UPI ব্যবহার করে আরও গ্রাহক টানা সম্ভব।`
+      : isTamil
+      ? `**${location}** இல் **${businessCategory}** க்கான வாய்ப்புகள்:
+
+- **சந்தை இடைவெளி**: **35%+** சந்தை பங்கை எளிதில் பெறலாம்.
+- **மதிப்பு கூட்டல்**: சிறந்த பேக்கேஜிங் மூலம் **15-20%** கூடுதல் லாபம்.
+- **டிஜிட்டல்**: UPI பேமெண்ட் மூலம் அதிக வாடிக்கையாளர்கள்.`
+      : isTelugu
+      ? `**${location}** లో **${businessCategory}** కోసం అవకాశాలు:
+
+- **మార్కెట్ గ్యాప్**: **35%+** మార్కెట్ వాటాను సులభంగా పొందవచ్చు.
+- **విలువ జోడింపు**: మంచి ప్యాకేజింగ్ ద్వారా **15-20%** అదనపు లాభం.
+- **డిజిటల్**: UPI ద్వారా ఎక్కువ మంది కస్టమర్లు.`
+      : isMarathi
+      ? `**${location}** मध्ये **${businessCategory}** साठी संधी:
+
+- **बाजारातील उणीव**: **३५%+** बाजार हिस्सा मिळवण्याची संधी.
+- **मूल्यवर्धन**: चांगल्या पॅकेजिंगमुळे **१५-२०%** अतिरिक्त नफा.
+- **डिजिटल**: UPI द्वारे अधिक ग्राहक जोडणे शक्य.`
+      : `Localized Market Opportunity & Niche Analysis for **${businessCategory}** in **${location}**:
+
+- **Identified Market Gap**: Currently, the **${location}** block relies on unorganized vendors with inconsistent pricing and quality fluctuations. Establishing a structured, MoSJE-backed enterprise fills an immediate demand deficit with an estimated **35%+ market share capture potential**.
+- **Premium Margin Leverage**: Introducing standardized grading, hygienic packaging, and clear price tags yields an additional **15-20% margin premium** over informal competitors.
+- **Digital Payment Adoption**: Integrating UPI payments and digital order tracking unlocks friction-free transactions with local tech-savvy households and small business buyers.`,
     swot: {
       strengths: isHindi ? [
         `MoSJE की ${schemeName} योजना के तहत ₹${formattedLoan} (90%) की भारी concessional लोन सहायता केवल ${interestRate} वार्षिक ब्याज दर पर।`,
@@ -199,10 +262,11 @@ const getFeasibilityReport = async (req, res) => {
 
     const currentDateStr = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-    const prompt = `
+const prompt = `
 You are an expert AI Business Advisor for rural micro-entrepreneurs in India, acting on behalf of the Ministry of Social Justice and Empowerment (MoSJE). 
 The user needs an exhaustive, highly detailed, professional Hyper-Local Business Feasibility Report. 
 Language required: ${language}.
+CRITICAL REQUIREMENT: Generate the ENTIRE report natively in ${language}. DO NOT translate from English. Use natural local phrasing, idioms, and terminology appropriate for ${language}.
 
 Applicant Profile & Demographics:
 - Social Category: ${socialCategory}
@@ -397,6 +461,9 @@ const askAdvisorQuestion = async (req, res) => {
       const qLower = q.toLowerCase();
       const isHindi = language === "Hindi";
       const isBengali = language === "Bengali";
+  const isTamil = language === "Tamil";
+  const isTelugu = language === "Telugu";
+  const isMarathi = language === "Marathi";
       const formattedCost = cost.toLocaleString('en-IN');
       const formattedLoan = Math.round(cost * 0.9).toLocaleString('en-IN');
 
